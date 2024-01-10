@@ -13,55 +13,6 @@ from .metric import *
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 from deepfashion.utils.dataset_utils import *
 
-def iteration(
-        model, 
-        dataloader, 
-        epoch, 
-        is_train, 
-        device, 
-        optimizer=None, 
-        scheduler=None, 
-        use_wandb=False
-        ):
-    type_str = 'Train' if is_train else 'Valid'
-    epoch_iterator = tqdm(dataloader)
-    total_loss = 0.
-    for iter, batch in enumerate(epoch_iterator, start=1):
-        # Forward
-        anchors = {key: value.to(device) for key, value in batch['anchors'].items()}
-        positives = {key: value.to(device) for key, value in batch['positives'].items()}
-        negatives = {key: value.to(device) for key, value in batch['negatives'].items()}
-
-        anchor_embeds, positive_embeds, negative_embeds = model(anchors, positives, negatives)
-
-        # Compute running loss
-        running_loss = nn.TripletMarginLoss(margin=2, reduction='mean')(anchor_embeds, positive_embeds, negative_embeds)
-        total_loss += running_loss.item()
-        if is_train == True:
-            optimizer.zero_grad()
-            running_loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
-            optimizer.step()
-            if scheduler:
-                scheduler.step()
-        # Log
-        epoch_iterator.set_description(
-            f'[{type_str}] Epoch: {epoch + 1:03} | Loss: {running_loss:.5f}'
-            )
-        if use_wandb:
-            log = {
-                f'{type_str}_loss': running_loss, 
-                f'{type_str}_step': epoch * len(epoch_iterator) + iter
-                }
-            if is_train == True:
-                log["learning_rate"] = scheduler.get_last_lr()[0]
-            wandb.log(log)
-    # Final Log
-    total_loss = total_loss / iter
-    if is_train == False:
-        print( f'[E N D] Epoch: {epoch + 1:03} | loss: {total_loss:.5f} ' + '\n')
-    return total_loss
-
 
 def evaluate_cp():
     pass
@@ -125,8 +76,7 @@ class Trainer:
     def _train(self, epoch: int, dataloader: DataLoader):
         self.model.train()
         is_train=True
-        loss = iteration(
-            model = self.model, 
+        loss = self.model.iteration(
             dataloader = dataloader, 
             epoch = epoch, 
             is_train = is_train, 
@@ -142,7 +92,7 @@ class Trainer:
     def _validate(self, epoch: int, dataloader: DataLoader):
         self.model.eval()
         is_train=False
-        loss = iteration(
+        loss = self.model.iteration(
             model = self.model, 
             dataloader = dataloader, 
             epoch = epoch, 

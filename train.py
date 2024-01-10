@@ -12,6 +12,7 @@ from albumentations.pytorch import ToTensorV2
 
 
 from deepfashion.models.type_aware_net import TypeAwareNet
+from deepfashion.models.csa_net import CSANet
 
 from deepfashion.utils.trainer import *
 from deepfashion.utils.dataset import *
@@ -23,9 +24,9 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 # Parser
 parser = argparse.ArgumentParser(description='Outfit-Transformer Trainer')
-parser.add_argument('--model', help='Model', type=str, default='type_aware_net')
-parser.add_argument('--train_batch', help='Size of Batch for Training', type=int, default=4)
-parser.add_argument('--valid_batch', help='Size of Batch for Validation, Test', type=int, default=4)
+parser.add_argument('--model', help='Model', type=str, default='csa_net')
+parser.add_argument('--train_batch', help='Size of Batch for Training', type=int, default=6)
+parser.add_argument('--valid_batch', help='Size of Batch for Validation, Test', type=int, default=6)
 parser.add_argument('--n_epochs', help='Number of epochs', type=int, default=5)
 parser.add_argument('--scheduler_step_size', help='Step LR', type=int, default=100)
 parser.add_argument('--learning_rate', help='Learning rate', type=float, default=1e-3)
@@ -101,7 +102,9 @@ valid_dataloader = DataLoader(
     )
 
 if args.model == 'type_aware_net':
-    model = TypeAwareNet(embedding_dim=64).to(device)
+    model = TypeAwareNet(embedding_dim=32).to(device)
+elif args.model == 'csa_net':
+    model = CSANet(embedding_dim=32).to(device)
 print('[COMPLETE] Build Model')
 
 optimizer = AdamW(model.parameters(), lr=training_args.learning_rate,)

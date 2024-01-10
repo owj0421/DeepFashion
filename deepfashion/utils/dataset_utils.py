@@ -15,7 +15,7 @@ from tqdm import tqdm
 def stack_tensors(mask, tensor):
     mask = mask.view(-1)
     s = list(tensor.shape)
-    tensor = tensor.view([s[0] * s[1]] + s[2:])
+    tensor = tensor.contiguous().view([s[0] * s[1]] + s[2:])
     tensor = tensor[~mask]
     return tensor
 
@@ -25,7 +25,7 @@ def unstack_tensors(mask, tensor):
     mask = mask.view(-1)
     new_tensor = torch.zeros([B * S] + list(tensor.shape)[1:], dtype=tensor.dtype, device=tensor.get_device())
     new_tensor[~mask] = tensor
-    new_tensor = new_tensor.view([B, S] + list(tensor.shape)[1:])
+    new_tensor = new_tensor.contiguous().view([B, S] + list(tensor.shape)[1:])
     return new_tensor
 
 

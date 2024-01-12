@@ -22,6 +22,7 @@ class DatasetArguments:
     img_transform: Optional[A.Compose] = None
     txt_type: Literal['hglmm', 'token'] = 'hglmm'
     txt_max_token: int = 16
+    n_neg: int = 4
     
 
 class PolyvoreDataset(Dataset):
@@ -32,7 +33,7 @@ class PolyvoreDataset(Dataset):
             args: DatasetArguments,
             tokenizer: Optional[AutoTokenizer] = None
             ):
-        # Dataset configurations
+        # Arguments
         self.args = args
         self.is_train = (args.dataset_type == 'train')
         # Image Data Configurations
@@ -47,7 +48,6 @@ class PolyvoreDataset(Dataset):
         else:
             self.desc2hglmm = load_hglmm(data_dir, args)
         # Meta Data preprocessing
-        self.max_input_len = args.max_input_len
         self.item_ids, self.item_id2idx, \
         self.item_id2category, self.category2item_ids, self.categories, self.category2category_id, \
             self.outfit_id2item_id, self.item_id2desc = load_data(data_dir, args)
@@ -60,7 +60,7 @@ class PolyvoreDataset(Dataset):
             self.data = load_cp_inputs(data_dir, args, self.outfit_id2item_id)
         elif args.task_type == 'fitb':
             self.data = load_fitb_inputs(data_dir, args, self.outfit_id2item_id)
-        elif args.task_type == 'triplet':
+        elif args.task_type in ['triplet', 'outfit_ranking']:
             self.data = load_triplet_inputs(data_dir, args, self.outfit_id2item_id)
         else:
             raise ValueError('task_type must be one of "cp", "fitb", and "triplet".')
@@ -86,13 +86,11 @@ class PolyvoreDataset(Dataset):
                 desc = np.zeros(self.text_feat_dim, np.float32)
         return desc
     
-    def _pad_inputs(self, inputs, max_input_len: Optional[int] = None):
-        if not max_input_len:
-            max_input_len = self.max_input_len
-        input_mask = torch.ones((max_input_len), dtype=torch.long)
+    def _pad_inputs(self, inputs):
+        input_mask = torch.ones((self.args.max_input_len), dtype=torch.long)
         input_mask[:len(inputs)] = 0
         input_mask = input_mask.bool()
-        inputs = inputs + [self.pad_item for _ in range(max_input_len - len(inputs))]
+        inputs = inputs + [self.pad_item for _ in range(self.args.max_input_len - len(inputs))]
         return input_mask, inputs
     
     def _get_single_input(self, item_id):
@@ -109,7 +107,7 @@ class PolyvoreDataset(Dataset):
             input_mask = torch.zeros((len(inputs)), dtype=torch.long).bool()
             
         category, img, desc = zip(*inputs)
-        category = torch.stack(category)
+        category = torch.concat(category, dim=-1)
         img = torch.stack(img)
         if self.args.txt_type == 'token':
             desc = self.tokenizer(desc, max_length=self.args.txt_max_token, padding='max_length', truncation=True, return_tensors='pt')
@@ -134,13 +132,29 @@ class PolyvoreDataset(Dataset):
             return  {'questions': questions, 'candidates': candidates} # ans is always 0 index
         
         elif self.args.task_type =='triplet':
-            outfit_ids = self.data[idx]
-            positive_id = [outfit_ids.pop(random.randrange(len(outfit_ids)))]
-            anchor_ids = outfit_ids
-            negative_ids = self._get_neg_samples(positive_id, n=6, ignore_ids=anchor_ids)
+            outfit_ids = self.data[idx].copy()
+            random.shuffle(outfit_ids)
+            
+            positive_ids = [outfit_ids.pop()]
+            anchor_ids = [outfit_ids.pop()]
+            negative_ids = self._get_neg_samples(positive_ids, n=self.args.n_neg, ignore_ids=anchor_ids)
 
             anchors = self._get_inputs(anchor_ids, pad=True)
-            positives = self._get_inputs(positive_id)
+            positives = self._get_inputs(positive_ids)
+            negatives = self._get_inputs(negative_ids)
+                
+            return {'anchors': anchors, 'positives': positives, 'negatives': negatives}
+        
+        elif self.args.task_type =='outfit_ranking':
+            outfit_ids = self.data[idx].copy()
+            random.shuffle(outfit_ids)
+            
+            positive_ids = [outfit_ids.pop()]
+            anchor_ids = outfit_ids
+            negative_ids = self._get_neg_samples(positive_ids, n=self.args.n_neg, ignore_ids=anchor_ids)
+
+            anchors = self._get_inputs(anchor_ids, pad=True)
+            positives = self._get_inputs(positive_ids)
             negatives = self._get_inputs(negative_ids)
                 
             return {'anchors': anchors, 'positives': positives, 'negatives': negatives}

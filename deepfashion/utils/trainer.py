@@ -14,14 +14,6 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Un
 from deepfashion.utils.dataset_utils import *
 
 
-def evaluate_cp():
-    pass
-
-
-def evaluate_fitb():
-    pass
-
-
 @dataclass
 class TrainingArguments:
     model: str
@@ -42,6 +34,7 @@ class Trainer:
             model: nn.Module,
             train_dataloader: DataLoader,
             valid_dataloader: DataLoader,
+            fitb_dataloader: DataLoader,
             optimizer: torch.optim.Optimizer,
             metric: MetricCalculator,
             scheduler: Optional[torch.optim.lr_scheduler.StepLR] = None
@@ -52,32 +45,34 @@ class Trainer:
         self.optimizer = optimizer
         self.train_dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
+        self.fitb_dataloader = fitb_dataloader
         self.scheduler = scheduler
         self.metric = metric
         self.args = args
         self.best_state = {}
 
     def fit(self):
-        best_loss = np.inf
+        best_criterion = -np.inf
         for epoch in range(self.args.n_epochs):
-            train_loss = self._train(epoch, self.train_dataloader)
-            valid_loss = self._validate(epoch, self.valid_dataloader)
-            if valid_loss < best_loss:
-               best_loss = valid_loss
+            train_loss = self._train(epoch)
+            valid_loss = self._validate(epoch)
+            criterion = self._evaluate(epoch)
+            if criterion > best_criterion:
+               best_criterion = criterion
                self.best_state['model'] = deepcopy(self.model.state_dict())
 
             if epoch % self.args.save_every == 0:
                 date = datetime.now().strftime('%Y-%m-%d')
                 output_dir = os.path.join(self.args.work_dir, 'checkpoints', self.args.model, date)
-                model_name = f'{epoch}_{best_loss:.3f}'
+                model_name = f'{epoch}_{best_criterion:.3f}'
                 self._save(output_dir, model_name)
 
 
-    def _train(self, epoch: int, dataloader: DataLoader):
+    def _train(self, epoch: int):
         self.model.train()
         is_train=True
         loss = self.model.iteration(
-            dataloader = dataloader, 
+            dataloader = self.train_dataloader, 
             epoch = epoch, 
             is_train = is_train, 
             device = self.device,
@@ -89,19 +84,29 @@ class Trainer:
 
 
     @torch.no_grad()
-    def _validate(self, epoch: int, dataloader: DataLoader):
+    def _validate(self, epoch: int):
         self.model.eval()
         is_train=False
         loss = self.model.iteration(
-            model = self.model, 
-            dataloader = dataloader, 
+            dataloader = self.valid_dataloader, 
             epoch = epoch, 
             is_train = is_train,
+            device = self.device,
             use_wandb = self.args.use_wandb
             )
         return loss
 
-
+    @torch.no_grad()
+    def _evaluate(self, epoch: int):
+        self.model.eval()
+        criterion = self.model.evaluation(
+            dataloader = self.fitb_dataloader,
+            epoch = epoch,
+            device = self.device,
+            use_wandb = self.args.use_wandb
+            )
+        return criterion
+    
     def _save(self, dir, model_name, best_model: bool=True):
         def _create_folder(dir):
             try:

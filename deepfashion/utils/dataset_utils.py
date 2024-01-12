@@ -30,6 +30,7 @@ def unstack_tensors(mask, tensor):
 
 
 def stack_dict(batch):
+    batch = batch.copy()
     for i in batch.keys():
         if i == 'input_mask':
             continue
@@ -38,6 +39,7 @@ def stack_dict(batch):
 
 
 def unstack_dict(batch):
+    batch = batch.copy()
     for i in batch.keys():
         if i == 'input_mask':
             continue
@@ -109,7 +111,7 @@ def load_data(data_dir, args):
     outfit_id2item_id = {}
     for outfit in outfit_data:
         outfit_id = outfit['set_id']
-        for item in outfit['items'][:args.max_input_len]:
+        for item in outfit['items']:
             # Item of cloth
             item_id = item['item_id']
             # Category of cloth

@@ -4,8 +4,8 @@
 
 ## 🤗 Introduction
 
-Deep Fashion is a package of deep-learning based fashion recommendation models with PyTorch. Although there have been numerous papers since 2018, we have distributed the model directly into the implementation, following the fact that there has been no officially published model. We aimed to implement the paper as much as possible, but since it is a private project, there may be some other aspects.<br>
-Also, there is no mordern loader to use Polyvore Dataset, so I made it. I hope it will be helpful for researchers who use Polyvore dataset to study.
+Deep Fashion is a package of deep-learning based fashion recommendation models with PyTorch. Behind the fact that none of the numerous papers released since 2018 have been implemented, we implement and distribute the model ourselves. We aimed to implement the paper as much as possible, but since it is a private project, there may be some other aspects. Therefore, if there is a better way, please contribute.<br>
+In addition, the repository includes a DataLoader that enables easy and fast implementation of Polyvore Dataset. The Loader is configured to enable more diverse and modular work by referring to Type-aware-net, so I hope it will help researchers.<br>
 
 ## 📦 Datasets
 Download the Polyvore Outfits dataset including the splits and questions for the compatibility and fill-in-the-blank tasks from [here](https://drive.google.com/file/d/13-J4fAPZahauaGycw3j_YvbAHO7tOTW5/view).<br>

@@ -10,7 +10,7 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union, Literal
 from tqdm import tqdm
-
+from deepfashion.models.baseline import *
 
 def stack_tensors(mask, tensor):
     mask = mask.view(-1)
@@ -45,6 +45,13 @@ def unstack_dict(batch):
             continue
         batch[i] = unstack_tensors(batch['input_mask'], batch[i])
     return batch
+
+def unstack_output(output):
+    for i in output.__dict__.keys():
+        if i == 'mask':
+            continue
+        setattr(output, i, unstack_tensors(output.mask, getattr(output, i)))
+    return output
 
 
 def load_fitb_inputs(data_dir, args, outfit_id2item_id):

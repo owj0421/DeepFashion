@@ -20,7 +20,7 @@ class DatasetArguments:
     max_input_len: int = 8
     img_size: Tuple[int] = (224, 224)
     img_transform: Optional[A.Compose] = None
-    txt_type: Literal['hglmm', 'token'] = 'hglmm'
+    txt_type: Literal['hglmm', 'token'] = 'token'
     txt_max_token: int = 16
     n_neg: int = 4
     
@@ -60,7 +60,7 @@ class PolyvoreDataset(Dataset):
             self.data = load_cp_inputs(data_dir, args, self.outfit_id2item_id)
         elif args.task_type == 'fitb':
             self.data = load_fitb_inputs(data_dir, args, self.outfit_id2item_id)
-        elif args.task_type in ['triplet', 'outfit_ranking']:
+        elif args.task_type in ['triplet', 'n-pair']:
             self.data = load_triplet_inputs(data_dir, args, self.outfit_id2item_id)
         else:
             raise ValueError('task_type must be one of "cp", "fitb", and "triplet".')
@@ -145,7 +145,7 @@ class PolyvoreDataset(Dataset):
                 
             return {'anchors': anchors, 'positives': positives, 'negatives': negatives}
         
-        elif self.args.task_type =='outfit_ranking':
+        elif self.args.task_type =='n-pair':
             outfit_ids = self.data[idx].copy()
             random.shuffle(outfit_ids)
             

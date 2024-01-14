@@ -14,11 +14,12 @@ Download the Polyvore Outfits dataset including the splits and questions for the
 ## 📚 Models List
 <div align="center">
 
-|Name|Paper|FITB|
-|:-:|:-|:-:|
-|type-aware-net|[ECCV 2018] [Learning Type-Aware Embeddings for Fashion Compatibility](https://arxiv.org/abs/1803.09196)|0|
-|csa-net|[CVPR 2020] [Category-based Subspace Attention Network (CSA-Net)](https://arxiv.org/abs/1912.08967?ref=dl-staging-website.ghost.io)|0|
-|fashion-swin|[IEEE 2023] [Fashion Compatibility Learning Via Triplet-Swin Transformer](https://ieeexplore.ieee.org/abstract/document/10105392)|54|
+|Name|Paper|Text|FITB Acc.<br>(Original)|FITB Acc.<br>(Ours)|
+|:-:|:-|:-:|:-:|:-:|
+|type-aware-net|[ECCV 2018] [Learning Type-Aware Embeddings for Fashion Compatibility](https://arxiv.org/abs/1803.09196)|YES|57.8|0|
+|csa-net|[CVPR 2020] [Category-based Subspace Attention Network (CSA-Net)](https://arxiv.org/abs/1912.08967?ref=dl-staging-website.ghost.io)|NO|63.7|0|
+|sat|[IEEE2022] [SAT: Self-adaptive training for fashion compatibility prediction](https://arxiv.org/abs/2206.12622)|NO|62.2|0|
+|fashion-swin|[IEEE 2023] [Fashion Compatibility Learning Via Triplet-Swin Transformer](https://ieeexplore.ieee.org/abstract/document/10105392)|YES|60.7|0|
 
 </div>
 

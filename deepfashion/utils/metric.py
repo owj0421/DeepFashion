@@ -11,9 +11,6 @@ class MetricCalculator:
         self.y_true += y_true
         self.y_pred += y_pred
         self.y_score += y_score
-
-    def calc_auc(self):
-        return roc_auc_score(self.y_true, self.y_score)
     
     def calc_acc(self):
         return accuracy_score(self.y_true, self.y_pred)

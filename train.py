@@ -18,17 +18,19 @@ from deepfashion.utils.trainer import *
 from deepfashion.utils.dataset import *
 from deepfashion.utils.metric import MetricCalculator
 
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union, Literal
+
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # Parser
 parser = argparse.ArgumentParser(description='DeepFashion')
-parser.add_argument('--model', help='Model', type=Literal['type_aware_net', 'csa_net', 'fashion_swin'], default='type-aware-net')
-parser.add_argument('--loss_type', help='loss_type', type=Literal['triplet', 'outfit_ranking'], default='triplet')
+parser.add_argument('--model', help='Model', type=str, default='type-aware-net')
+parser.add_argument('--sampling_type', help='sampling_type', type=str, default='triplet')
 parser.add_argument('--embedding_dim', help='embedding dim', type=int, default=64)
-parser.add_argument('--train_batch', help='Size of Batch for Training', type=int, default=64)
-parser.add_argument('--valid_batch', help='Size of Batch for Validation, Test', type=int, default=64)
+parser.add_argument('--train_batch', help='Size of Batch for Training', type=int, default=1)
+parser.add_argument('--valid_batch', help='Size of Batch for Validation, Test', type=int, default=1)
 parser.add_argument('--n_epochs', help='Number of epochs', type=int, default=5)
 parser.add_argument('--save_every', help='Number of epochs', type=int, default=3)
 parser.add_argument('--scheduler_step_size', help='Step LR', type=int, default=100)
@@ -65,7 +67,7 @@ training_args = TrainingArguments(
     
 train_dataset_args = DatasetArguments(
     polyvore_split = 'nondisjoint',
-    task_type = args.loss_type,
+    task_type = args.sampling_type,
     dataset_type = 'train',
     img_size = (224, 224),
     img_transform = A.Compose([
@@ -80,7 +82,7 @@ train_dataset_args = DatasetArguments(
 
 valid_dataset_args = DatasetArguments(
     polyvore_split = 'nondisjoint',
-    task_type = args.loss_type,
+    task_type = args.sampling_type,
     dataset_type = 'valid',
     img_size = (224, 224),
     img_transform = A.Compose([
@@ -115,14 +117,14 @@ valid_dataloader = DataLoader(PolyvoreDataset(args.data_dir, valid_dataset_args,
 fitb_dataloader = DataLoader(PolyvoreDataset(args.data_dir, fitb_dataset_args, tokenizer), 
                              training_args.valid_batch, shuffle=False)
 
-categories = 12
+num_category = 12
 
 if args.model == 'type-aware-net':
-    model = TypeAwareNet(embedding_dim=args.embedding_dim, categories=categories).to(device)
+    model = TypeAwareNet(embedding_dim=args.embedding_dim, num_category=num_category).to(device)
 elif args.model == 'csa-net':
-    model = CSANet(embedding_dim=args.embedding_dim, categories=categories).to(device)
+    model = CSANet(embedding_dim=args.embedding_dim, num_category=num_category).to(device)
 elif args.model == 'fashion-swin':
-    model = FashionSwin(embedding_dim=args.embedding_dim, categories=categories).to(device)
+    model = FashionSwin(embedding_dim=args.embedding_dim, num_category=num_category).to(device)
 print('[COMPLETE] Build Model')
 
 optimizer = AdamW(model.parameters(), lr=training_args.learning_rate,)

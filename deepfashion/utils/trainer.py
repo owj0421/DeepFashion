@@ -11,7 +11,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from .metric import *
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
-from deepfashion.utils.dataset_utils import *
+from deepfashion.utils.utils import *
 
 
 @dataclass

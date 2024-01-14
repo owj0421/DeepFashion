@@ -7,14 +7,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
-from deepfashion.utils.dataset_utils import *
+from DeepFashion.deepfashion.utils.utils import *
 from deepfashion.models.encoder.builder import *
 
 from itertools import combinations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union, Literal
 
-from deepfashion.utils.dataset_utils import *
+from deepfashion.utils.utils import *
 
 
 @ dataclass
@@ -40,55 +40,16 @@ class DeepFashionModel(nn.Module):
         pass
 
     def forward(self, inputs) -> DeepFashionOutput:
-        inputs = stack_dict(inputs)
-        outputs = None
-        pass
-
-        return outputs
+        return NotImplementedError("DeepFashionModel must implement its own forward method")
     
     def evalutaion_step(self, batch, device) -> np.ndarray:
-        questions = {key: value.to(device) for key, value in batch['questions'].items()}
-        candidates = {key: value.to(device) for key, value in batch['candidates'].items()}
-
-        question_outputs = self(questions)
-        candidate_outputs = self(candidates)
-
-        ans = []
-        for batch_i in range(candidate_outputs.mask.shape[0]):
-            dists = []
-            for c_i in range(torch.sum(~candidate_outputs.mask[batch_i])):
-                score = 0.
-                for q_i in range(torch.sum(~question_outputs.mask[batch_i])):
-                    q = question_outputs.embed[batch_i][q_i]
-                    c = candidate_outputs.embed[batch_i][c_i]
-                    score += float(nn.PairwiseDistance(p=2)(q, c))
-                dists.append(score)
-            ans.append(np.argmin(np.array(dists)))
-        ans = np.array(ans)
-        return ans
+        return NotImplementedError("DeepFashionModel must implement its own evalutaion_step method")
     
     def iteration_step(self, batch, device) -> np.ndarray:
-        anchors = {key: value.to(device) for key, value in batch['anchors'].items()}
-        positives = {key: value.to(device) for key, value in batch['positives'].items()}
-        negatives = {key: value.to(device) for key, value in batch['negatives'].items()}
-
-        anc_outputs = self(anchors)
-        pos_outputs = self(positives)
-        neg_outputs = self(negatives)
-
-        running_loss = []
-        for batch_i in range(anc_outputs.mask.shape[0]):
-            for anc_i in range(torch.sum(~anc_outputs.mask[batch_i])):
-                for neg_i in range(torch.sum(~neg_outputs.mask[batch_i])):
-                    anc_embed = anc_outputs.embed[batch_i][anc_i]
-                    pos_embed = pos_outputs.embed[batch_i][0]
-                    neg_embed = neg_outputs.embed[batch_i][neg_i]
-                    running_loss.append(nn.TripletMarginLoss(margin=0.3, reduction='mean')(anc_embed, pos_embed, neg_embed))
-        running_loss = torch.mean(torch.stack(running_loss))
-        return running_loss
+        return NotImplementedError("DeepFashionModel must implement its own iteration_step method")
     
     def evaluation(self, dataloader, epoch, device, use_wandb=False):
-        type_str = 'FITB'
+        type_str = 'fitb'
         epoch_iterator = tqdm(dataloader)
         
         total_correct = 0.
@@ -116,7 +77,7 @@ class DeepFashionModel(nn.Module):
 
     def iteration(self, dataloader, epoch, is_train, device,
                   optimizer=None, scheduler=None, use_wandb=False):
-        type_str = 'TRAIN' if is_train else 'VALID'
+        type_str = 'Train' if is_train else 'Valid'
         epoch_iterator = tqdm(dataloader)
 
         total_loss = 0.

@@ -10,7 +10,7 @@ import wandb
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from deepfashion.utils.dataset_utils import *
+from deepfashion.utils.utils import *
 from deepfashion.models.encoder.builder import *
 from deepfashion.models.baseline import *
 
@@ -34,7 +34,7 @@ class CSANet(DeepFashionModel):
     
     def _get_embedding(self, inputs, target_category):
         # Get genreral embedding from inputs
-        embed = self.img_encoder(inputs['img'])
+        embed = self.img_encoder(inputs['image_features'])
         # Compute Attention Score
         input_category = self._one_hot(inputs['category'])
         target_category = self._one_hot(target_category)
@@ -43,24 +43,25 @@ class CSANet(DeepFashionModel):
         # Compute Subspace Mask via Attetion
         mask = torch.matmul(self.mask.T.unsqueeze(0), attention.unsqueeze(2)).squeeze(2)
         masked_embed = embed * mask
-        masked_embed = unstack_tensors(inputs['input_mask'], masked_embed)
+        masked_embed = unstack_tensors(inputs['mask'], masked_embed)
 
         return masked_embed
 
     def forward(self, inputs, target_category=None):
         inputs = stack_dict(inputs)
-        
+        outputs = DeepFashionOutput(mask=inputs['mask'])
+
         if target_category is not None:
-            target_category = stack_tensors(inputs['input_mask'], target_category)
+            target_category = stack_tensors(inputs['mask'], target_category)
             embed = self._get_embedding(inputs, target_category)
+            outputs.embed = embed
         else: # returns embedding for all categories
-            embed_list = []
+            embed_by_category = []
             for i in range(self.num_category):
-                target_category = torch.ones((inputs['img'].shape[0]), dtype=torch.long, device=inputs['category'].get_device()) * i
-                embed_list.append(self._get_embedding(inputs, target_category))
-            embed = torch.stack(embed_list)
-        
-        outputs = DeepFashionOutput(mask=inputs['input_mask'], embed=embed)
+                target_category = torch.ones((inputs['category'].shape[0]), dtype=torch.long, device=inputs['category'].get_device()) * i
+                embed_by_category.append(self._get_embedding(inputs, target_category))
+            outputs.embed_by_category = embed_by_category
+
         return outputs
     
     def evalutaion_step(self, batch, device) -> ndarray:
@@ -79,8 +80,8 @@ class CSANet(DeepFashionModel):
                     q_category = questions['category'][batch_i][q_i]
                     c_category = candidates['category'][batch_i][c_i]
 
-                    q = question_outputs.embed[c_category][batch_i][q_i]
-                    c = candidate_outputs.embed[q_category][batch_i][c_i]
+                    q = question_outputs.embed_by_category[c_category][batch_i][q_i]
+                    c = candidate_outputs.embed_by_category[q_category][batch_i][c_i]
                     score += float(nn.PairwiseDistance(p=2)(q, c))
                 dists.append(score)
             ans.append(np.argmin(np.array(dists)))
@@ -102,9 +103,9 @@ class CSANet(DeepFashionModel):
                 for n_i in range(torch.sum(~neg_outputs.mask[b_i])):
                     anc_category = anchors['category'][b_i][a_i]
                     pos_category = positives['category'][b_i][0]
-                    anc_embed = anc_outputs.embed[pos_category][b_i][a_i]
-                    pos_embed = pos_outputs.embed[anc_category][b_i][0]
-                    neg_embed = neg_outputs.embed[anc_category][b_i][n_i]
+                    anc_embed = anc_outputs.embed_by_category[pos_category][b_i][a_i]
+                    pos_embed = pos_outputs.embed_by_category[anc_category][b_i][0]
+                    neg_embed = neg_outputs.embed_by_category[anc_category][b_i][n_i]
                     running_loss.append(nn.TripletMarginLoss(margin=0.3, reduction='mean')(anc_embed, pos_embed, neg_embed))
         running_loss = torch.mean(torch.stack(running_loss))
         return running_loss

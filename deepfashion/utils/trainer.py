@@ -19,6 +19,7 @@ class TrainingArguments:
     model: str
     train_batch: int=8
     valid_batch: int=32
+    fitb_batch: int=32
     n_epochs: int=100
     learning_rate: float=0.01
     save_every: int=1

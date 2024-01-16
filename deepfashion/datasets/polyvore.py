@@ -18,12 +18,13 @@ class DatasetArguments:
     polyvore_split: str = 'nondisjoint'
     task_type: str = 'cp'
     dataset_type: str = 'train'
-    outfit_max_length: int = 8
-    img_size: int = 224
-    img_transform: Optional[List[Any]] = None
-    txt_type: Literal['hglmm', 'token'] = 'token'
-    txt_max_token: int = 16
-    n_neg: int = 4
+    outfit_max_length: int = 6
+    image_size: int = 224
+    image_transform: Optional[List[Any]] = None
+    use_text: bool=False
+    text_type: Literal['hglmm', 'token'] = 'token'
+    text_max_length: int = 8
+    n_neg: int = 3
     
 
 class PolyvoreDataset(Dataset):
@@ -44,23 +45,27 @@ class PolyvoreDataset(Dataset):
         
         # Data Configurations
         self.img_dir = os.path.join(data_dir, 'images')
-        use_custom_transform = True if args.img_transform else False
-        self.image_processor = DeepFashionImageProcessor(size=args.img_size, use_custom_transform=use_custom_transform, custom_transform=args.img_transform)
-        if args.txt_type == 'hglmm':
+        use_custom_transform = True if args.image_transform else False
+        self.image_processor = DeepFashionImageProcessor(size=args.image_size, use_custom_transform=use_custom_transform, custom_transform=args.image_transform)
+        self.use_text = args.use_text
+        if args.text_type == 'hglmm':
             self.desc2hglmm = load_hglmm(data_dir, args)
-            self.input_processor = DeepFashionInputProcessor(categories=self.categories, use_text_feature=True, text_feature_dim=6000, outfit_max_length=args.outfit_max_length)
+            self.input_processor = DeepFashionInputProcessor(
+                categories=self.categories, use_text_feature=True, text_feature_dim=6000, outfit_max_length=args.outfit_max_length)
         else:
-            self.input_processor = DeepFashionInputProcessor(categories=self.categories, image_processor=self.image_processor, text_tokenizer=tokenizer, text_max_length=args.txt_max_token, outfit_max_length=args.outfit_max_length)
+            self.input_processor = DeepFashionInputProcessor(
+                categories=self.categories, image_processor=self.image_processor, \
+                text_tokenizer=tokenizer, text_max_length=args.text_max_length, outfit_max_length=args.outfit_max_length)
         
         # Input
         if args.task_type == 'cp':
             self.data = load_cp_inputs(data_dir, args, self.outfit_id2item_id)
         elif args.task_type == 'fitb':
             self.data = load_fitb_inputs(data_dir, args, self.outfit_id2item_id)
-        elif args.task_type in ['triplet', 'n-pair']:
+        elif args.task_type in ['triplet', 'outfit']:
             self.data = load_triplet_inputs(data_dir, args, self.outfit_id2item_id)
         else:
-            raise ValueError('task_type must be one of "cp", "fitb", and "triplet".')
+            raise ValueError('task_type must be one of "cp", "fitb", and "triplet / outfit".')
 
     def _load_img(self, item_id):
         path = os.path.join(self.img_dir, f"{item_id}.jpg")
@@ -70,26 +75,25 @@ class PolyvoreDataset(Dataset):
     
     def _load_txt(self, item_id):
         desc = self.item_id2desc[item_id] if item_id in self.item_id2desc else self.item_id2category[item_id]
-        if self.args.txt_type == 'hglmm':
+        if self.args.text_type == 'hglmm':
             if desc in self.desc2hglmm.keys():
                 desc = self.desc2hglmm[desc]
             else:
                 desc = np.zeros(self.text_feat_dim, np.float32)
         return desc
     
-    def _get_single_input(self, item_id):
-        category = self.item_id2category[item_id]
-        img = self._load_img(item_id)
-        txt = self._load_txt(item_id)
-        return category, img, txt
-    
     def _get_inputs(self, item_ids, pad: bool=False) -> Dict[Literal['input_mask', 'img', 'desc'], Tensor]:
-        category, images, texts = map(lambda x: list(x), zip(*[self._get_single_input(item_id) for item_id in item_ids]))
+        category = [self.item_id2category[item_id] for item_id in item_ids]
+        images = [self._load_img(item_id) for item_id in item_ids]
+        if self.use_text:
+            texts = [self._load_txt(item_id) for item_id in item_ids]
+        else:
+            texts = None
 
         return self.input_processor(category, images, texts, do_pad=pad)
 
-    def _get_neg_samples(self, positive_id, n, ignore_ids=None):
-        return  random.sample(self.item_ids, n)
+    def _get_neg_samples(self, positive_id, ignore_ids=None):
+        return  random.sample(self.item_ids, self.args.n_neg)
 
     def __getitem__(self, idx):
         if self.args.task_type == 'cp':
@@ -105,11 +109,10 @@ class PolyvoreDataset(Dataset):
         
         elif self.args.task_type =='triplet':
             outfit_ids = self.data[idx].copy()
-            random.shuffle(outfit_ids)
             
-            positive_ids = [outfit_ids.pop()]
-            anchor_ids = [outfit_ids.pop()]
-            negative_ids = self._get_neg_samples(positive_ids, n=self.args.n_neg, ignore_ids=anchor_ids)
+            positive_ids = [outfit_ids.pop(random.randrange(len(outfit_ids)))]
+            anchor_ids = [outfit_ids.pop(random.randrange(len(outfit_ids)))]
+            negative_ids = self._get_neg_samples(positive_ids, ignore_ids=anchor_ids)
 
             anchors = self._get_inputs(anchor_ids, pad=True)
             positives = self._get_inputs(positive_ids)
@@ -117,13 +120,12 @@ class PolyvoreDataset(Dataset):
                 
             return {'anchors': anchors, 'positives': positives, 'negatives': negatives}
         
-        elif self.args.task_type =='n-pair':
+        elif self.args.task_type =='outfit':
             outfit_ids = self.data[idx].copy()
-            random.shuffle(outfit_ids)
             
-            positive_ids = [outfit_ids.pop()]
+            positive_ids = [outfit_ids.pop(random.randrange(len(outfit_ids)))]
             anchor_ids = outfit_ids
-            negative_ids = self._get_neg_samples(positive_ids, n=self.args.n_neg, ignore_ids=anchor_ids)
+            negative_ids = self._get_neg_samples(positive_ids, ignore_ids=anchor_ids)
 
             anchors = self._get_inputs(anchor_ids, pad=True)
             positives = self._get_inputs(positive_ids)

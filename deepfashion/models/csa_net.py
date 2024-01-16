@@ -13,25 +13,31 @@ import torch.nn.functional as F
 from deepfashion.utils.utils import *
 from deepfashion.models.encoder.builder import *
 from deepfashion.models.baseline import *
+from deepfashion.models.loss import *
 
 
 class CSANet(DeepFashionModel):
+    
     def __init__(
             self,
             embedding_dim: int = 64,
             num_category: int = 12,
+            num_subspace: int = 5,
             img_backbone: str = 'resnet-18'
             ):
         super().__init__(embedding_dim, num_category, img_backbone)
-        self.mask = nn.Parameter(torch.ones((num_category, embedding_dim)))
+        self.num_subspace = num_subspace
+
+        self.mask = nn.Parameter(torch.ones((num_subspace, embedding_dim)))
         initrange = 0.1
         self.mask.data.uniform_(-initrange, initrange)
         self.attention = nn.Sequential(
             nn.Linear(num_category * 2, num_category * 2),
             nn.ReLU(),
-            nn.Linear(num_category * 2, num_category)
+            nn.Linear(num_category * 2, num_subspace)
             )
     
+
     def _get_embedding(self, inputs, target_category):
         # Get genreral embedding from inputs
         embed = self.img_encoder(inputs['image_features'])
@@ -47,9 +53,10 @@ class CSANet(DeepFashionModel):
 
         return masked_embed
 
+
     def forward(self, inputs, target_category=None):
+        outputs = DeepFashionOutput(mask=inputs['mask'], category=inputs['category'])
         inputs = stack_dict(inputs)
-        outputs = DeepFashionOutput(mask=inputs['mask'])
 
         if target_category is not None:
             target_category = stack_tensors(inputs['mask'], target_category)
@@ -64,48 +71,16 @@ class CSANet(DeepFashionModel):
 
         return outputs
     
-    def evalutaion_step(self, batch, device) -> ndarray:
-        questions = {key: value.to(device) for key, value in batch['questions'].items()}
-        candidates = {key: value.to(device) for key, value in batch['candidates'].items()}
 
-        question_outputs = self(questions)
-        candidate_outputs = self(candidates)
-
-        ans = []
-        for batch_i in range(candidate_outputs.mask.shape[0]):
-            dists = []
-            for c_i in range(torch.sum(~(candidate_outputs.mask[batch_i]))):
-                score = 0.
-                for q_i in range(torch.sum(~(question_outputs.mask[batch_i]))):
-                    q_category = questions['category'][batch_i][q_i]
-                    c_category = candidates['category'][batch_i][c_i]
-
-                    q = question_outputs.embed_by_category[c_category][batch_i][q_i]
-                    c = candidate_outputs.embed_by_category[q_category][batch_i][c_i]
-                    score += float(nn.PairwiseDistance(p=2)(q, c))
-                dists.append(score)
-            ans.append(np.argmin(np.array(dists)))
-        ans = np.array(ans)
-        return ans
-    
     def iteration_step(self, batch, device) -> ndarray:
-        anchors = {key: value.to(device) for key, value in batch['anchors'].items()}
-        positives = {key: value.to(device) for key, value in batch['positives'].items()}
-        negatives = {key: value.to(device) for key, value in batch['negatives'].items()}
+        ancs = {key: value.to(device) for key, value in batch['anchors'].items()}
+        poss = {key: value.to(device) for key, value in batch['positives'].items()}
+        negs = {key: value.to(device) for key, value in batch['negatives'].items()}
 
-        anc_outputs = self(anchors)
-        pos_outputs = self(positives)
-        neg_outputs = self(negatives)
+        anc_outs = self(ancs)
+        pos_outs = self(poss)
+        neg_outs = self(negs)
 
-        running_loss = []
-        for b_i in range(anc_outputs.mask.shape[0]):
-            for a_i in range(torch.sum(~anc_outputs.mask[b_i])):
-                for n_i in range(torch.sum(~neg_outputs.mask[b_i])):
-                    anc_category = anchors['category'][b_i][a_i]
-                    pos_category = positives['category'][b_i][0]
-                    anc_embed = anc_outputs.embed_by_category[pos_category][b_i][a_i]
-                    pos_embed = pos_outputs.embed_by_category[anc_category][b_i][0]
-                    neg_embed = neg_outputs.embed_by_category[anc_category][b_i][n_i]
-                    running_loss.append(nn.TripletMarginLoss(margin=0.3, reduction='mean')(anc_embed, pos_embed, neg_embed))
-        running_loss = torch.mean(torch.stack(running_loss))
-        return running_loss
+        loss = outfit_ranking_loss(anc_outs, pos_outs, neg_outs, self.margin)
+
+        return loss

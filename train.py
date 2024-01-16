@@ -28,10 +28,14 @@ if __name__ == '__main__':
     # Parser
     parser = argparse.ArgumentParser(description='DeepFashion')
     parser.add_argument('--model', help='Model', type=str, default='csa-net')
-    parser.add_argument('--sampling_type', help='sampling_type', type=str, default='n-pair')
+    parser.add_argument('--sampling_type', help='sampling_type', type=str, default='outfit')
     parser.add_argument('--embedding_dim', help='embedding dim', type=int, default=64)
+    parser.add_argument('--use_text', help='embedding dim', type=bool, default=False)
+    parser.add_argument('--text_type', help='embedding dim', type=str, default='token')
+    parser.add_argument('--n_neg', help='embedding dim', type=int, default=4)
     parser.add_argument('--train_batch', help='Size of Batch for Training', type=int, default=2)
     parser.add_argument('--valid_batch', help='Size of Batch for Validation, Test', type=int, default=2)
+    parser.add_argument('--fitb_batch', help='Size of Batch for Validation, Test', type=int, default=16)
     parser.add_argument('--n_epochs', help='Number of epochs', type=int, default=2)
     parser.add_argument('--save_every', help='Number of epochs', type=int, default=3)
     parser.add_argument('--scheduler_step_size', help='Step LR', type=int, default=200)
@@ -53,12 +57,11 @@ if __name__ == '__main__':
     # Setup
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-    txt_type = 'token'
-
     training_args = TrainingArguments(
         model=args.model,
         train_batch=args.train_batch,
         valid_batch=args.valid_batch,
+        fitb_batch=args.fitb_batch,
         n_epochs=args.n_epochs,
         save_every=args.save_every,
         learning_rate=args.learning_rate,
@@ -70,24 +73,32 @@ if __name__ == '__main__':
         polyvore_split = 'nondisjoint',
         task_type = args.sampling_type,
         dataset_type = 'train',
-        img_transform = [
+        image_transform = [
             A.Resize(224, 224),
             A.HorizontalFlip(),
             A.Normalize(),
             ToTensorV2(),
             ],
+        n_neg=args.n_neg,
+        use_text=args.use_text,
+        text_type=args.text_type
         )
 
     valid_dataset_args = DatasetArguments(
         polyvore_split = 'nondisjoint',
         task_type = args.sampling_type,
         dataset_type = 'valid',
+        n_neg=args.n_neg,
+        use_text=args.use_text,
+        text_type=args.text_type
         )
 
     fitb_dataset_args = DatasetArguments(
         polyvore_split = 'nondisjoint',
         task_type = 'fitb',
         dataset_type = 'valid',
+        use_text=args.use_text,
+        text_type=args.text_type
         )
 
     tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/paraphrase-albert-small-v2')
@@ -99,7 +110,7 @@ if __name__ == '__main__':
     valid_dataloader = DataLoader(PolyvoreDataset(args.data_dir, valid_dataset_args, tokenizer),
                                 training_args.valid_batch, shuffle=False, num_workers=4)
     fitb_dataloader = DataLoader(PolyvoreDataset(args.data_dir, fitb_dataset_args, tokenizer), 
-                                training_args.valid_batch, shuffle=False, num_workers=4)
+                                training_args.fitb_batch, shuffle=False, num_workers=4)
 
     num_category = 12
 

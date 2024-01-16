@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
-from DeepFashion.deepfashion.utils.utils import *
+from deepfashion.utils.utils import *
 from deepfashion.models.encoder.builder import *
 
 from itertools import combinations
@@ -20,7 +20,9 @@ from deepfashion.utils.utils import *
 @ dataclass
 class DeepFashionOutput:
     mask: Optional[Tensor] = None
+    category: Optional[Tensor] = None
     embed: Optional[Tensor] = None
+    embed_by_category: Optional[Tensor] = None
 
 
 class DeepFashionModel(nn.Module):
@@ -29,7 +31,8 @@ class DeepFashionModel(nn.Module):
             embedding_dim: Optional[int] = 64,
             num_category: Optional[int] = 12,
             img_backbone: Literal['resnet-18', 'vgg-13', 'swin-transformer', 'vit'] = 'resnet-18',
-            txt_backbone: Literal['bert'] = 'bert'
+            txt_backbone: Literal['bert'] = 'bert',
+            margin: float = 0.3
             ):
         super().__init__()
         self.embedding_dim = embedding_dim
@@ -37,16 +40,35 @@ class DeepFashionModel(nn.Module):
         self.img_encoder = build_img_encoder(img_backbone, embedding_dim=embedding_dim)
         self.txt_encoder = build_txt_encoder(txt_backbone, embedding_dim=embedding_dim)
         self.model = None
+        self.margin = margin
         pass
 
     def forward(self, inputs) -> DeepFashionOutput:
         return NotImplementedError("DeepFashionModel must implement its own forward method")
     
-    def evalutaion_step(self, batch, device) -> np.ndarray:
-        return NotImplementedError("DeepFashionModel must implement its own evalutaion_step method")
-    
     def iteration_step(self, batch, device) -> np.ndarray:
         return NotImplementedError("DeepFashionModel must implement its own iteration_step method")
+    
+    def evalutaion_step(self, batch, device):
+        questions = {key: value.to(device) for key, value in batch['questions'].items()}
+        candidates = {key: value.to(device) for key, value in batch['candidates'].items()}
+
+        question_outs = self(questions)
+        candidate_outs = self(candidates)
+
+        ans = []
+        for b_i in range(candidate_outs.mask.shape[0]):
+            dists = []
+            for c_i in range(torch.sum(~(candidate_outs.mask[b_i]))):
+                score = 0.
+                for q_i in range(torch.sum(~(question_outs.mask[b_i]))):
+                    q = question_outs.embed_by_category[candidate_outs.category[b_i][c_i]][b_i][q_i]
+                    c = candidate_outs.embed_by_category[question_outs.category[b_i][q_i]][b_i][c_i]
+                    score += float(nn.PairwiseDistance(p=2)(q, c))
+                dists.append(score)
+            ans.append(np.argmin(np.array(dists)))
+        ans = np.array(ans)
+        return ans
     
     def evaluation(self, dataloader, epoch, device, use_wandb=False):
         type_str = 'fitb'

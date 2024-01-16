@@ -31,7 +31,6 @@ class DeepFashionImageProcessor:
             if use_normalize:
                 transform.append(A.Normalize())
             transform.append(ToTensorV2())
-
         self.transform = A.Compose(transform)
 
     def __call__(
@@ -49,12 +48,12 @@ class DeepFashionInputProcessor:
             categories: Optional[List[str]] = None, 
             image_processor: Optional[DeepFashionImageProcessor] = None, 
             text_tokenizer: Optional[AutoTokenizer] = None, 
-            text_max_length: int = 32, 
+            text_max_length: int = 8, 
             text_padding: str = 'max_length', 
             text_truncation: bool = True, 
             use_text_feature: bool = False,
             text_feature_dim: Optional[int] = None,
-            outfit_max_length: int = 16
+            outfit_max_length: int = 8
             ):
         if categories is None:
             raise ValueError("You need to specify a `categories`.")
@@ -81,6 +80,7 @@ class DeepFashionInputProcessor:
 
         self.outfit_max_length = outfit_max_length
 
+
     def __call__(
             self, 
             category: Optional[List[str]]=None, 
@@ -97,6 +97,13 @@ class DeepFashionInputProcessor:
             raise ValueError("You have to specify either text or images.")
         
         inputs = dict()
+
+        if do_pad:
+            mask = torch.ones((self.outfit_max_length), dtype=torch.bool)
+            mask[:len(category)] = False
+        else:
+            mask = torch.zeros((len(category)), dtype=torch.bool)
+        inputs['mask'] = mask
         
         if category is not None:
             if do_truncation:
@@ -127,13 +134,5 @@ class DeepFashionInputProcessor:
             if do_pad:
                 images = images + [np.zeros(list(images[0].shape), dtype='uint8') for _ in range(self.outfit_max_length - len(images))]
             inputs['image_features'] = self.image_processor(images, **kwargs)
-
-        if do_pad:
-            mask = torch.ones((self.outfit_max_length), dtype=torch.long)
-            mask[:len(category)] = 0
-        else:
-            mask = torch.zeros((len(category)), dtype=torch.long)
-        mask = mask.bool()
-        inputs['mask'] = mask
 
         return inputs

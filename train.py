@@ -52,8 +52,8 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler_step_size', help='Step LR', type=int, default=1000)
     parser.add_argument('--learning_rate', help='Learning rate', type=float, default=1e-5)
 
-    parser.add_argument('--wandb_api_key', default='fa37a3c4d1befcb0a7b9b4d33799c7bdbff1f81f') # 
-    parser.add_argument('--checkpoint', default='F:/Projects/DeepFashion/checkpoints/csa-net/2024-01-19/1_0.567.pth') # 
+    parser.add_argument('--wandb_api_key', default=None) 
+    parser.add_argument('--checkpoint', default=None)
 
     args = parser.parse_args()
 

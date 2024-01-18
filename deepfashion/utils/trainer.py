@@ -74,7 +74,7 @@ class Trainer:
 
             if epoch % self.args.save_every == 0:
                 date = datetime.now().strftime('%Y-%m-%d')
-                output_dir = os.path.join(self.args.work_dir, 'checkpoints', self.args.model, date)
+                output_dir = os.path.join(self.args.work_dir, 'deepfashion', 'checkpoints', self.args.model, date)
                 model_name = f'{epoch}_{best_criterion:.3f}'
                 self._save(output_dir, model_name)
 

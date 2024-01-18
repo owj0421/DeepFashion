@@ -1,3 +1,7 @@
+"""
+Author:
+    Wonjun Oh, owj0421@naver.com
+"""
 import os
 import numpy as np
 import random
@@ -12,6 +16,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Un
 from tqdm import tqdm
 from deepfashion.models.baseline import *
 
+
 def stack_tensors(mask, tensor):
     B, S = mask.shape
     mask = mask.view(-1)
@@ -24,7 +29,8 @@ def stack_tensors(mask, tensor):
 def unstack_tensors(mask, tensor):
     B, S = mask.shape
     mask = mask.view(-1)
-    new_tensor = torch.zeros([B * S] + list(tensor.shape)[1:], dtype=tensor.dtype, device=tensor.get_device())
+    new_shape = [B * S] + list(tensor.shape)[1:]
+    new_tensor = torch.zeros(new_shape, dtype=tensor.dtype, device=tensor.get_device())
     new_tensor[~mask] = tensor
     new_tensor = new_tensor.contiguous().view([B, S] + list(tensor.shape)[1:])
     return new_tensor

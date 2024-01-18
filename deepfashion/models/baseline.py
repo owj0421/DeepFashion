@@ -2,19 +2,27 @@
 Author:
     Wonjun Oh, owj0421@naver.com
 """
+import os
+import math
 import wandb
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch import Tensor
-from deepfashion.utils.utils import *
-from deepfashion.models.encoder.builder import *
-
-from itertools import combinations
+from tqdm import tqdm
+from itertools import chain
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union, Literal
 
+import numpy as np
+from numpy import ndarray
+
+import torch
+from torch import Tensor
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+
 from deepfashion.utils.utils import *
+from deepfashion.models.baseline import *
+from deepfashion.models.encoder.builder import *
+
 
 
 @ dataclass
@@ -28,17 +36,20 @@ class DeepFashionOutput:
 class DeepFashionModel(nn.Module):
     def __init__(
             self,
-            embedding_dim: Optional[int] = 64,
-            num_category: Optional[int] = 12,
-            img_backbone: Literal['resnet-18', 'vgg-13', 'swin-transformer', 'vit'] = 'resnet-18',
-            txt_backbone: Literal['bert'] = 'bert',
+            embedding_dim: Optional[int] = 32,
+            categories: Optional[List[str]] = None,
+            img_backbone: Literal['resnet-18', 'vgg-13', 'swin-transformer', 'vit', 'none'] = 'resnet-18',
+            txt_backbone: Literal['bert', 'none'] = 'none',
             margin: float = 0.3
             ):
         super().__init__()
         self.embedding_dim = embedding_dim
-        self.num_category = num_category
+        if 'pad' not in categories:
+            categories += ['pad']
+        self.num_category = len(categories)
         self.img_encoder = build_img_encoder(img_backbone, embedding_dim=embedding_dim)
-        self.txt_encoder = build_txt_encoder(txt_backbone, embedding_dim=embedding_dim)
+        if txt_backbone != 'none':
+            self.txt_encoder = build_txt_encoder(txt_backbone, embedding_dim=embedding_dim)
         self.model = None
         self.margin = margin
         pass
@@ -66,12 +77,13 @@ class DeepFashionModel(nn.Module):
                     c = candidate_outs.embed_by_category[question_outs.category[b_i][q_i]][b_i][c_i]
                     score += float(nn.PairwiseDistance(p=2)(q, c))
                 dists.append(score)
+            # print(dists)
             ans.append(np.argmin(np.array(dists)))
         ans = np.array(ans)
         return ans
     
-    def evaluation(self, dataloader, epoch, device, use_wandb=False):
-        type_str = 'fitb'
+    def evaluation(self, dataloader, epoch, is_test, device, use_wandb=False):
+        type_str = 'test' if is_test else 'fitb'
         epoch_iterator = tqdm(dataloader)
         
         total_correct = 0.
@@ -99,7 +111,7 @@ class DeepFashionModel(nn.Module):
 
     def iteration(self, dataloader, epoch, is_train, device,
                   optimizer=None, scheduler=None, use_wandb=False):
-        type_str = 'Train' if is_train else 'Valid'
+        type_str = 'train' if is_train else 'valid'
         epoch_iterator = tqdm(dataloader)
 
         total_loss = 0.
@@ -110,7 +122,7 @@ class DeepFashionModel(nn.Module):
             if is_train == True:
                 optimizer.zero_grad()
                 running_loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.parameters(), 5)
+                # torch.nn.utils.clip_grad_norm_(self.parameters(), 5)
                 optimizer.step()
                 if scheduler:
                     scheduler.step()

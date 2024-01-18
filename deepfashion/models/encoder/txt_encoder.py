@@ -1,3 +1,8 @@
+# -*- coding:utf-8 -*-
+"""
+Author:
+    Wonjun Oh, owj0421@naver.com
+"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

@@ -1,7 +1,11 @@
+"""
+Author:
+    Wonjun Oh, owj0421@naver.com
+"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.models import resnet18, swin_s
+from torchvision.models import resnet18, swin_s, vgg13, efficientnet_b0
 from transformers import AutoModel
 
 class BaseEncoder(nn.Module):
@@ -19,7 +23,7 @@ class BaseEncoder(nn.Module):
 
     def freeze_backbone(self):
         for name, param in self.model.layer1.named_parameters():
-            if name in ['fc', 'head'] :
+            if name in ['fc', 'head', 'classifier'] :
                 print(name)
                 continue
             param.requires_grad = False
@@ -30,7 +34,7 @@ class BaseEncoder(nn.Module):
             y = F.normalize(y, p=2, dim=1)
         
         return y
-
+    
 
 class ResNet18Encoder(BaseEncoder):
     def __init__(
@@ -42,6 +46,36 @@ class ResNet18Encoder(BaseEncoder):
         super().__init__(embedding_dim, do_linear_probing, normalize)
         self.model = resnet18(pretrained=True)
         self.model.fc = nn.Linear(self.model.fc.in_features, self.embedding_dim, bias=True)
+        if do_linear_probing:
+            self.freeze_backbone()
+
+
+class VGG13Encoder(BaseEncoder):
+    def __init__(
+            self,
+            embedding_dim: int=64,
+            do_linear_probing: bool = False,
+            normalize: bool = False
+            ):
+        super().__init__(embedding_dim, do_linear_probing, normalize)
+        self.model = vgg13(pretrained=True)
+        n_inputs = self.model.classifier[-1].in_features
+        self.model.classifier[-1] = nn.Linear(n_inputs, self.embedding_dim)
+        if do_linear_probing:
+            self.freeze_backbone()
+
+
+class EfficientNetB0Encoder(BaseEncoder):
+    def __init__(
+            self,
+            embedding_dim: int=64,
+            do_linear_probing: bool = False,
+            normalize: bool = False
+            ):
+        super().__init__(embedding_dim, do_linear_probing, normalize)
+        self.model = efficientnet_b0(pretrained=True)
+        n_inputs = self.model.classifier[-1].in_features
+        self.model.classifier[-1] = nn.Linear(n_inputs, self.embedding_dim, bias=True)
         if do_linear_probing:
             self.freeze_backbone()
 

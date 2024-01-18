@@ -14,22 +14,16 @@
 
 ## 🤗 Introduction
 
-Deep Fashion is a package of deep-learning based fashion recommendation models with PyTorch. <br><br>
+Deep Fashion is a **Easy-to-use**, **Modular** and **Extendible** package of deep-learning based fashion recommendation models with PyTorch. <br><br>
 Behind the fact that none of the numerous papers released since 2018 have been implemented, we implement and distribute the model ourselves. We aimed to implement the paper as much as possible, but since it is a personal project, there may be some other aspects. Therefore, if there is a better way, please contribute.<br><br>
-Only the models studied for the purpose of Retrieval were developed, so the prediction-based models(SCE-Net, Outfit-Transformer etc) were not implemented.
+Only the models studied for the purpose of retrieval were developed, so the prediction-based models(SCE-Net, Outfit-Transformer etc) were not implemented.
 <br><br>
-In addition, the repository includes a DataLoader that enables easy and fast implementation of Polyvore Dataset to enable more diverse and modular work. It is configured based on Type-aware-net code. Hope that it will help you.<br><br>
+In addition, the repository includes a DataLoader that enables easy and fast implementation of Polyvore Dataset to enable more diverse and modular work. It is configured based on type-aware-net code.<br><br>
 
-## 📦 Datasets
-Download the Polyvore Outfits dataset including the splits and questions for the compatibility and fill-in-the-blank tasks from [here](https://drive.google.com/file/d/13-J4fAPZahauaGycw3j_YvbAHO7tOTW5/view) which is first released in type-aware-net.<br>
-
-## 📚 Models
-For fairness, all Backbone models used ResNet18. (However, we used some other models depending on the main purpose of the paper.) In addition, the Embedding dimension was fixed at 32. All learning was carried out using the online mining method.
-
-
+## 📚 Supported Models
 <div align="center">
 
-|Name|Paper|FITB<br>Acc.<br>(Ours)|FITB<br>Acc.<br>(Original)|
+|Model|Paper|FITB<br>Acc.<br>(Ours)|FITB<br>Acc.<br>(Original)|
 |:-:|:-|:-:|:-:|
 |type-aware-net|[ECCV 2018] [Learning Type-Aware Embeddings for Fashion Compatibility](https://arxiv.org/abs/1803.09196)|?<br>32, ResNet18 <br>Image|**55.65**<br>64, ResNet18 <br>Image + Text|
 |csa-net|[CVPR 2020] [Category-based Subspace Attention Network (CSA-Net)](https://arxiv.org/abs/1912.08967?ref=dl-staging-website.ghost.io)|**56.7**<br>32, ResNet18 <br>Image|**59.3**<br>64, ResNet18 <br>Image|
@@ -38,6 +32,31 @@ For fairness, all Backbone models used ResNet18. (However, we used some other mo
 
 </div>
 
+**Notes**
+ - The model implementation is based on the above papers, but there may be other parts of it.
+ - All models used **ResNet18** as Backbone. <br>(However, some other models are different depending on the purpose of papers.)
+ - All Embedding dimension was fixed at **32**. 
+ - All learning was carried out using the **online mining method**.
+
+## ⚙ Requirements
+This project recommends Python 3.7 or higher.
+```
+python -m pip install -r requirements.txt
+```
+
+## 📦 Datasets
+Download the Polyvore Outfits dataset including the splits and questions for the compatibility and fill-in-the-blank tasks from [here](https://drive.google.com/file/d/13-J4fAPZahauaGycw3j_YvbAHO7tOTW5/view) which is first pre-processed by type-aware-net authors. Thank you for your for efforts!
+
+
+## 🧱 Train
+`$MODEL` is same as above mentioned sheet.
+
+```
+!python train.py --model $MODEL --embedding_dim $NUM --img_backbone resnet-18 --dataset_type outfit --train_batch 64 --valid_batch 64 --fitb_batch 32 --n_epochs 5 --work_dir $DIR --data_dir $DIR --num_workers 4 --scheduler_step_size 500 --learning_rate 5e-5
+```
+
+## 🧶 Demos
+Preparing for demos...
 
 ## 🔔 Note
 - A paper review of implementation can be found at [here](). (Only Available in Korean)

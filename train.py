@@ -30,19 +30,19 @@ warnings.filterwarnings("ignore", category=UserWarning)
 if __name__ == '__main__':
     # Parser
     parser = argparse.ArgumentParser(description='DeepFashion')
-    parser.add_argument('--model', help='Model', type=str, default='type-aware-net')
+    parser.add_argument('--model', help='Model', type=str, default='csa-net')
     parser.add_argument('--embedding_dim', help='embedding dim', type=int, default=32)
     parser.add_argument('--img_backbone', default='resnet-18') # 'efficientnet-b0', 'resnet-18', 'swin-transformer', 'vgg-13'
 
-    parser.add_argument('--sampling_type', help='sampling_type', type=str, default='outfit')
+    parser.add_argument('--dataset_type', help='dataset_type', type=str, default='outfit')
     parser.add_argument('--use_text', help='', type=bool, default=False)
     parser.add_argument('--use_text_feature', help='', type=bool, default=False)
-    parser.add_argument('--outfit_max_length', help='', type=int, default=12)
+    parser.add_argument('--outfit_max_length', help='', type=int, default=16)
 
     parser.add_argument('--train_batch', help='Size of Batch for Training', type=int, default=32)
     parser.add_argument('--valid_batch', help='Size of Batch for Validation, Test', type=int, default=32)
     parser.add_argument('--fitb_batch', help='Size of Batch for FITB evaluation', type=int, default=12)
-    parser.add_argument('--n_epochs', help='Number of epochs', type=int, default=2)
+    parser.add_argument('--n_epochs', help='Number of epochs', type=int, default=1)
     parser.add_argument('--save_every', help='', type=int, default=1)
     
     parser.add_argument('--work_dir', help='Full working directory', type=str, default='F:\Projects\DeepFashion')
@@ -50,10 +50,10 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', help='', type=int, default=4)
 
     parser.add_argument('--scheduler_step_size', help='Step LR', type=int, default=1000)
-    parser.add_argument('--learning_rate', help='Learning rate', type=float, default=1e-4)
+    parser.add_argument('--learning_rate', help='Learning rate', type=float, default=1e-5)
 
     parser.add_argument('--wandb_api_key', default='fa37a3c4d1befcb0a7b9b4d33799c7bdbff1f81f') # 
-    parser.add_argument('--checkpoint', default=None) # 
+    parser.add_argument('--checkpoint', default='F:/Projects/DeepFashion/checkpoints/csa-net/2024-01-19/1_0.567.pth') # 
 
     args = parser.parse_args()
 
@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
     train_dataset_args = DatasetArguments(
         polyvore_split = 'nondisjoint',
-        task_type = args.sampling_type,
+        task_type = args.dataset_type,
         dataset_type = 'train',
         outfit_max_length=args.outfit_max_length,
         use_text=args.use_text,
@@ -78,7 +78,7 @@ if __name__ == '__main__':
         )
     valid_dataset_args = DatasetArguments(
         polyvore_split = 'nondisjoint',
-        task_type = args.sampling_type,
+        task_type = args.dataset_type,
         dataset_type = 'valid',
         outfit_max_length=args.outfit_max_length,
         use_text=args.use_text,

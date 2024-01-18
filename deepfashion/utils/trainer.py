@@ -77,8 +77,6 @@ class Trainer:
                 output_dir = os.path.join(self.args.work_dir, 'checkpoints', self.args.model, date)
                 model_name = f'{epoch}_{best_criterion:.3f}'
                 self._save(output_dir, model_name)
-                
-            self._test(epoch)
 
 
     def _train(self, epoch: int):

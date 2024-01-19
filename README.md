@@ -27,7 +27,6 @@ In addition, the repository includes a DataLoader that enables easy and fast imp
 |:-:|:-|:-:|:-:|
 |type-aware-net|[ECCV 2018] [Learning Type-Aware Embeddings for Fashion Compatibility](https://arxiv.org/abs/1803.09196)|?<br>32, ResNet18 <br>Image|**55.65**<br>64, ResNet18 <br>Image + Text|
 |csa-net|[CVPR 2020] [Category-based Subspace Attention Network (CSA-Net)](https://arxiv.org/abs/1912.08967?ref=dl-staging-website.ghost.io)|**56.7**<br>32, ResNet18 <br>Image|**59.3**<br>64, ResNet18 <br>Image|
-|sat|[IEEE2022] [SAT: Self-adaptive training for fashion compatibility prediction](https://arxiv.org/abs/2206.12622)|**?**<br>32, ResNet18 <br>Image|**62.2**<br>128, VGG13 <br>Image|
 |fashion-swin|[IEEE 2023] [Fashion Compatibility Learning Via Triplet-Swin Transformer](https://ieeexplore.ieee.org/abstract/document/10105392)|?<br>32, Swin-t <br>Image|**60.7**<br>64, Swin-t <br>Image + Text|
 
 </div>

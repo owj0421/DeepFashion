@@ -45,7 +45,7 @@ python -m pip install -r requirements.txt
 ```
 
 ## 📦 Datasets
-Download the Polyvore Outfits dataset including the splits and questions for the compatibility and fill-in-the-blank tasks from [here](https://drive.google.com/file/d/13-J4fAPZahauaGycw3j_YvbAHO7tOTW5/view) which is first pre-processed by type-aware-net authors. Thank you for your for efforts!
+Download the Polyvore dataset from [here](https://github.com/xthan/polyvore-dataset?tab=readme-ov-file).
 
 
 ## 🧱 Train

@@ -25,17 +25,16 @@ In addition, the repository includes a DataLoader that enables easy and fast imp
 
 |Model|Paper|FITB<br>Acc.<br>(Ours)|FITB<br>Acc.<br>(Original)|
 |:-:|:-|:-:|:-:|
-|type-aware-net|[ECCV 2018] [Learning Type-Aware Embeddings for Fashion Compatibility](https://arxiv.org/abs/1803.09196)|?<br>32, ResNet18 <br>Image|**55.65**<br>64, ResNet18 <br>Image + Text|
-|csa-net|[CVPR 2020] [Category-based Subspace Attention Network (CSA-Net)](https://arxiv.org/abs/1912.08967?ref=dl-staging-website.ghost.io)|**56.7**<br>32, ResNet18 <br>Image|**59.3**<br>64, ResNet18 <br>Image|
+|type-aware-net|[ECCV 2018] [Learning Type-Aware Embeddings for Fashion Compatibility](https://arxiv.org/abs/1803.09196)|**52.6**<br>32, ResNet18 <br>Image|**54.5**<br>64, ResNet18 <br>Image + Text|
+|csa-net|[CVPR 2020] [Category-based Subspace Attention Network (CSA-Net)](https://arxiv.org/abs/1912.08967?ref=dl-staging-website.ghost.io)|**55.8**<br>32, ResNet18 <br>Image|**59.3**<br>64, ResNet18 <br>Image|
 |fashion-swin|[IEEE 2023] [Fashion Compatibility Learning Via Triplet-Swin Transformer](https://ieeexplore.ieee.org/abstract/document/10105392)|?<br>32, Swin-t <br>Image|**60.7**<br>64, Swin-t <br>Image + Text|
 
 </div>
 
 **Notes**
  - The model implementation is based on the above papers, but there may be other parts of it.
- - All models used **ResNet18** as Backbone. <br>(However, some other models are different depending on the purpose of papers.)
- - All Embedding dimension was fixed at **32**. 
- - All learning was carried out using the **online mining method**.
+ - In the test environment, for fairness, the embedding size was fixed at **32**, and **only images** were used.
+ - Learning was conducted with **online mining batch-all method**.
 
 ## ⚙ Requirements
 This project recommends Python 3.7 or higher.
@@ -51,7 +50,7 @@ Download the Polyvore dataset from [here](https://github.com/xthan/polyvore-data
 `$MODEL` is same as above mentioned sheet.
 
 ```
-!python train.py --model $MODEL --embedding_dim $NUM --img_backbone resnet-18 --dataset_type outfit --train_batch 64 --valid_batch 64 --fitb_batch 32 --n_epochs 5 --work_dir $DIR --data_dir $DIR --num_workers 4 --scheduler_step_size 500 --learning_rate 5e-5
+!python train.py --model $MODEL --embedding_dim $NUM --dataset_type outfit --train_batch 64 --valid_batch 64 --fitb_batch 32 --n_epochs 5 --work_dir $DIR --data_dir $DIR --num_workers 4 --scheduler_step_size 500 --learning_rate 5e-5
 ```
 
 ## 🧶 Demos

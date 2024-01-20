@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 """
 Author:
     Wonjun Oh, owj0421@naver.com

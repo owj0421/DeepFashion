@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 """
 Author:
     Wonjun Oh, owj0421@naver.com
@@ -20,6 +21,7 @@ from torch.utils.data import DataLoader
 
 from deepfashion.utils.utils import *
 from deepfashion.models.baseline import *
+
 
 def _safe_divide(a, b, eps=1e-7):
     return a / (b + eps)
@@ -63,7 +65,7 @@ def outfit_ranking_loss(
             - 'batch_all': Use the average of all negatives in the mini-batch.
             - 'batch_hard': Use the most hardest sample in the mini-batch.
         :param aggregation: How to handle a final output. same as torch triplet loss' one.
-        :return: Outfit Ranking Loss
+        :return: Outfit ranking loss
         """
         device=outfit_outs.mask.get_device()
 
@@ -85,7 +87,7 @@ def outfit_ranking_loss(
             outfit_wise_neg_matrix = outfit_wise_neg_matrix + torch.where(outfit_wise_neg_matrix == 0., torch.max(outfit_wise_neg_matrix), 0.)
             dist_neg, _ = torch.min(outfit_wise_neg_matrix, dim=-1, keepdim=True)
         else:
-            raise ValueError('')
+            raise ValueError('task_type must be one of `batch_all` and `batch_hard`.')
         
         hinge_dist = torch.clamp(margin + dist_pos - dist_neg, min=0.0)
         if aggregation == 'mean':
@@ -95,9 +97,10 @@ def outfit_ranking_loss(
         elif aggregation == 'none':
             loss = hinge_dist
         else:
-            raise ValueError('')
+            raise ValueError('aggregation must be one of `mean`, `sum` and `none`.')
         
         return loss
+
 
 def triplet_loss(
           outfit_outs: DeepFashionOutput, 
@@ -114,7 +117,7 @@ def triplet_loss(
             - 'batch_all': Use the average of all negatives in the mini-batch.
             - 'batch_hard': Use the most hardest sample in the mini-batch.
         :param aggregation: How to handle a final output. same as torch triplet loss' one.
-        :return: Outfit Ranking Loss
+        :return: Triplet margin loss
         """
         device=outfit_outs.mask.get_device()
 
@@ -134,7 +137,7 @@ def triplet_loss(
             neg_matrix = neg_matrix + torch.where(neg_matrix == 0., torch.max(neg_matrix), 0.)
             dist_neg, _ = torch.min(neg_matrix, dim=-1, keepdim=True)
         else:
-            raise ValueError('')
+            raise ValueError('task_type must be one of `batch_all` and `batch_hard`.')
         
         hinge_dist = torch.clamp(margin + dist_pos - dist_neg, min=0.0)
         if aggregation == 'mean':
@@ -144,71 +147,6 @@ def triplet_loss(
         elif aggregation == 'none':
             loss = hinge_dist
         else:
-            raise ValueError('')
+            raise ValueError('aggregation must be one of `mean`, `sum` and `none`.')
         
         return loss
-
-
-# def vse_loss(
-#           anc_outs: DeepFashionOutput, 
-#           pos_outs: DeepFashionOutput, 
-#           neg_outs: DeepFashionOutput, 
-#           margin: float = 0.3
-#           ):
-#         n_outfit = anc_outs.mask.shape[0]
-#         ans_per_batch = torch.sum(~anc_outs.mask, dim=-1)
-#         neg_per_batch = torch.sum(~neg_outs.mask, dim=-1)
-
-#         loss = []
-#         for b_i in range(n_outfit):
-#             for a_i in range(ans_per_batch[b_i]):
-#                 for n_i in range(neg_per_batch[b_i]):
-#                     anc_embed = anc_outs.embed_by_category[pos_outs.category[b_i][0]][b_i][a_i]
-#                     pos_embed = pos_outs.txt_embed_by_category[anc_outs.category[b_i][a_i]][b_i][0]
-#                     neg_embed = neg_outs.txt_embed_by_category[anc_outs.category[b_i][a_i]][b_i][n_i]
-#                     loss.append(nn.TripletMarginLoss(margin=margin, reduction='mean')(anc_embed, pos_embed, neg_embed))
-
-#                     anc_embed = anc_outs.txt_embed_by_category[pos_outs.category[b_i][0]][b_i][a_i]
-#                     pos_embed = pos_outs.embed_by_category[anc_outs.category[b_i][a_i]][b_i][0]
-#                     neg_embed = neg_outs.txt_embed_by_category[anc_outs.category[b_i][a_i]][b_i][n_i]
-#                     loss.append(nn.TripletMarginLoss(margin=margin, reduction='mean')(anc_embed, pos_embed, neg_embed))
-
-#                     anc_embed = anc_outs.txt_embed_by_category[pos_outs.category[b_i][0]][b_i][a_i]
-#                     pos_embed = pos_outs.txt_embed_by_category[anc_outs.category[b_i][a_i]][b_i][0]
-#                     neg_embed = neg_outs.embed_by_category[anc_outs.category[b_i][a_i]][b_i][n_i]
-#                     loss.append(nn.TripletMarginLoss(margin=margin, reduction='mean')(anc_embed, pos_embed, neg_embed))
-#         loss = torch.mean(torch.stack(loss))
-#         return loss
-
-
-# def sim_loss(
-#           anc_outs: DeepFashionOutput, 
-#           pos_outs: DeepFashionOutput, 
-#           neg_outs: DeepFashionOutput, 
-#           margin: float = 0.3,
-#           l_1: float = 5e-4,
-#           l_2: float = 5e-4,
-#           ):
-#         n_outfit = anc_outs.mask.shape[0]
-#         ans_per_batch = torch.sum(~anc_outs.mask, dim=-1)
-#         neg_per_batch = torch.sum(~neg_outs.mask, dim=-1)
-
-#         loss_1 = []
-#         loss_2 = []
-#         for b_i in range(n_outfit):
-#             for a_i in range(ans_per_batch[b_i]):
-#                 for n_i in range(neg_per_batch[b_i]):
-#                     anc_embed = anc_outs.embed_by_category[pos_outs.category[b_i][0]][b_i][a_i]
-#                     pos_embed = pos_outs.embed_by_category[anc_outs.category[b_i][a_i]][b_i][0]
-#                     neg_embed = neg_outs.embed_by_category[anc_outs.category[b_i][a_i]][b_i][n_i]
-#                     loss_1.append(nn.TripletMarginLoss(margin=margin, reduction='mean')(pos_embed, neg_embed, anc_embed))
-
-#                     if hasattr(anc_outs, 'txt_embed_by_category'):
-#                         anc_embed = anc_outs.embed_by_category[pos_outs.category[b_i][0]][b_i][a_i]
-#                         pos_embed = pos_outs.embed_by_category[anc_outs.category[b_i][a_i]][b_i][0]
-#                         neg_embed = neg_outs.embed_by_category[anc_outs.category[b_i][a_i]][b_i][n_i]
-#                         loss_2.append(nn.TripletMarginLoss(margin=margin, reduction='mean')(pos_embed, neg_embed, anc_embed))
-#         loss = l_1 * torch.mean(torch.stack(loss_1))
-#         if loss_2:
-#              loss += l_2 * torch.mean(torch.stack(loss_2))
-#         return loss

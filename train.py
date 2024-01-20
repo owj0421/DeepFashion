@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 """
 Author:
     Wonjun Oh, owj0421@naver.com
@@ -30,18 +31,17 @@ warnings.filterwarnings("ignore", category=UserWarning)
 if __name__ == '__main__':
     # Parser
     parser = argparse.ArgumentParser(description='DeepFashion')
-    parser.add_argument('--model', help='Model', type=str, default='csa-net')
+    parser.add_argument('--model', help='Model', type=str, default='type-aware-net')
     parser.add_argument('--embedding_dim', help='embedding dim', type=int, default=32)
-    parser.add_argument('--img_backbone', default='resnet-18') # 'efficientnet-b0', 'resnet-18', 'swin-transformer', 'vgg-13'
 
     parser.add_argument('--dataset_type', help='dataset_type', type=str, default='outfit')
     parser.add_argument('--use_text', help='', type=bool, default=False)
     parser.add_argument('--use_text_feature', help='', type=bool, default=False)
-    parser.add_argument('--outfit_max_length', help='', type=int, default=16)
+    parser.add_argument('--outfit_max_length', help='', type=int, default=8)
 
     parser.add_argument('--train_batch', help='Size of Batch for Training', type=int, default=32)
     parser.add_argument('--valid_batch', help='Size of Batch for Validation, Test', type=int, default=32)
-    parser.add_argument('--fitb_batch', help='Size of Batch for FITB evaluation', type=int, default=12)
+    parser.add_argument('--fitb_batch', help='Size of Batch for FITB evaluation', type=int, default=16)
     parser.add_argument('--n_epochs', help='Number of epochs', type=int, default=1)
     parser.add_argument('--save_every', help='', type=int, default=1)
     
@@ -50,10 +50,10 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', help='', type=int, default=4)
 
     parser.add_argument('--scheduler_step_size', help='Step LR', type=int, default=1000)
-    parser.add_argument('--learning_rate', help='Learning rate', type=float, default=1e-5)
+    parser.add_argument('--learning_rate', help='Learning rate', type=float, default=5e-5)
 
-    parser.add_argument('--wandb_api_key', default=None) 
-    parser.add_argument('--checkpoint', default=None)
+    parser.add_argument('--wandb_api_key', default='fa37a3c4d1befcb0a7b9b4d33799c7bdbff1f81f') 
+    parser.add_argument('--checkpoint', default='F:/Projects/DeepFashion/deepfashion/checkpoints/type-aware-net/2024-01-20/0_0.435.pth')
 
     args = parser.parse_args()
 
@@ -114,11 +114,11 @@ if __name__ == '__main__':
 
     categories = ['accessories', 'all-body', 'bags', 'bottoms', 'hats', 'jewellery', 'outerwear', 'scarves', 'shoes', 'sunglasses', 'tops']
     if args.model == 'type-aware-net':
-        model = TypeAwareNet(embedding_dim=args.embedding_dim, categories=categories, img_backbone=args.img_backbone)
+        model = TypeAwareNet(embedding_dim=args.embedding_dim, categories=categories)
     elif args.model == 'csa-net':
-        model = CSANet(embedding_dim=args.embedding_dim, categories=categories, img_backbone=args.img_backbone)
+        model = CSANet(embedding_dim=args.embedding_dim, categories=categories)
     elif args.model == 'fashion-swin':
-        model = FashionSwin(embedding_dim=args.embedding_dim, categories=categories, img_backbone=args.img_backbone)
+        model = FashionSwin(embedding_dim=args.embedding_dim, categories=categories)
     print('[COMPLETE] Build Model')
 
     optimizer = AdamW(model.parameters(), lr=args.learning_rate,)

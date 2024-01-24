@@ -81,7 +81,7 @@ class PolyvoreDataset(Dataset):
             self.data = load_cp_inputs(data_dir, args, self.outfit_id2item_id)
         elif args.task_type == 'fitb':
             self.data = load_fitb_inputs(data_dir, args, self.outfit_id2item_id)
-        elif args.task_type == 'outfit':
+        elif args.task_type in ['outfit', 'triplet']:
             self.data = load_triplet_inputs(data_dir, args, self.outfit_id2item_id)
         else:
             raise ValueError('task_type must be one of "cp", "fitb", and "outfit".')
@@ -128,8 +128,13 @@ class PolyvoreDataset(Dataset):
             return  {'questions': questions, 'candidates': candidates} # ans is always 0 index
 
         elif self.args.task_type =='outfit':
-            outfit_ids = self.data[idx].copy()
-            outfits = self._get_inputs(outfit_ids, pad=True)
+            outfits = self._get_inputs(self.data[idx], pad=True)
+
+            return {'outfits': outfits}
+        
+        elif self.args.task_type =='triplet':
+            outfit_ids = random.sample(self.data[idx].copy(), 2)
+            outfits = self._get_inputs(outfit_ids)
 
             return {'outfits': outfits}
         

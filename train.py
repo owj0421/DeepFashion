@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
+from deepfashion.models.siamese_net import SiameseNet
 from deepfashion.models.type_aware_net import TypeAwareNet
 from deepfashion.models.csa_net import CSANet
 from deepfashion.models.fashion_swin import FashionSwin
@@ -31,29 +32,29 @@ warnings.filterwarnings("ignore", category=UserWarning)
 if __name__ == '__main__':
     # Parser
     parser = argparse.ArgumentParser(description='DeepFashion')
-    parser.add_argument('--model', help='Model', type=str, default='type-aware-net')
+    parser.add_argument('--model', help='Model', type=str, default='siamese-net')
     parser.add_argument('--embedding_dim', help='embedding dim', type=int, default=32)
 
-    parser.add_argument('--dataset_type', help='dataset_type', type=str, default='outfit')
+    parser.add_argument('--dataset_type', help='dataset_type', type=str, default='triplet')
     parser.add_argument('--use_text', help='', type=bool, default=False)
     parser.add_argument('--use_text_feature', help='', type=bool, default=False)
-    parser.add_argument('--outfit_max_length', help='', type=int, default=8)
+    parser.add_argument('--outfit_max_length', help='', type=int, default=12)
 
-    parser.add_argument('--train_batch', help='Size of Batch for Training', type=int, default=32)
-    parser.add_argument('--valid_batch', help='Size of Batch for Validation, Test', type=int, default=32)
+    parser.add_argument('--train_batch', help='Size of Batch for Training', type=int, default=64)
+    parser.add_argument('--valid_batch', help='Size of Batch for Validation, Test', type=int, default=64)
     parser.add_argument('--fitb_batch', help='Size of Batch for FITB evaluation', type=int, default=16)
     parser.add_argument('--n_epochs', help='Number of epochs', type=int, default=1)
     parser.add_argument('--save_every', help='', type=int, default=1)
     
     parser.add_argument('--work_dir', help='Full working directory', type=str, default='F:\Projects\DeepFashion')
     parser.add_argument('--data_dir', help='Full dataset directory', type=str, default='F:\Projects\datasets\polyvore_outfits')
-    parser.add_argument('--num_workers', help='', type=int, default=4)
+    parser.add_argument('--num_workers', help='', type=int, default=0)
 
     parser.add_argument('--scheduler_step_size', help='Step LR', type=int, default=1000)
     parser.add_argument('--learning_rate', help='Learning rate', type=float, default=5e-5)
 
     parser.add_argument('--wandb_api_key', default='fa37a3c4d1befcb0a7b9b4d33799c7bdbff1f81f') 
-    parser.add_argument('--checkpoint', default='F:/Projects/DeepFashion/deepfashion/checkpoints/type-aware-net/2024-01-20/0_0.435.pth')
+    parser.add_argument('--checkpoint', default=None)
 
     args = parser.parse_args()
 
@@ -113,7 +114,9 @@ if __name__ == '__main__':
                                        args.fitb_batch, shuffle=False, num_workers=args.num_workers)
 
     categories = ['accessories', 'all-body', 'bags', 'bottoms', 'hats', 'jewellery', 'outerwear', 'scarves', 'shoes', 'sunglasses', 'tops']
-    if args.model == 'type-aware-net':
+    if args.model == 'siamese-net':
+        model = SiameseNet(embedding_dim=args.embedding_dim, categories=categories)
+    elif args.model == 'type-aware-net':
         model = TypeAwareNet(embedding_dim=args.embedding_dim, categories=categories)
     elif args.model == 'csa-net':
         model = CSANet(embedding_dim=args.embedding_dim, categories=categories)

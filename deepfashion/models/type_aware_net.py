@@ -13,7 +13,7 @@ import torch.nn.functional as F
 from deepfashion.utils.utils import *
 from deepfashion.models.encoder.builder import *
 from deepfashion.models.baseline import *
-from deepfashion.models.loss import *
+from deepfashion.loss.triplet_margin_loss import *
 import math
 
 

@@ -24,7 +24,7 @@ import torch.nn.functional as F
 from deepfashion.utils.utils import *
 from deepfashion.models.encoder.builder import *
 from deepfashion.models.baseline import *
-from deepfashion.models.loss import *
+from deepfashion.loss.outfit_ranking_loss import *
 
 
 class CSANet(DeepFashionModel):
@@ -64,12 +64,14 @@ class CSANet(DeepFashionModel):
         if target_category is not None:
             target_category = stack_tensors(inputs['mask'], target_category)
             masked_embed = embed * self._get_mask(inputs['category'], target_category)
+
             outputs.embed = unstack_tensors(inputs['mask'], masked_embed)
         else: # returns embedding for all categories
             embed_by_category = []
             for i in range(self.num_category):
                 target_category = torch.ones((inputs['category'].shape[0]), dtype=torch.long, device=inputs['category'].get_device()) * i
                 masked_embed = embed * self._get_mask(inputs['category'], target_category)
+
                 embed_by_category.append(unstack_tensors(inputs['mask'], masked_embed))
             outputs.embed_by_category = embed_by_category
 

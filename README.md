@@ -13,10 +13,10 @@
 
 Deep Fashion is a **Easy-to-use**, **Modular** and **Extendible** package of deep-learning based fashion recommendation models with PyTorch. <br><br>
 Behind the fact that none of the numerous papers released since 2018 have been implemented, we implement and distribute the model ourselves. We aimed to implement the paper as much as possible, but since it is a personal project, there may be some other aspects. Therefore, if there is a better way, please contribute.<br><br>
-제공하는 것
-- 쉽게 Outfit을 Dataset으로 구성하고, Batch단위로 구성할 수 있는 Dataprocessor
-- Fashion compatibility 모델들
-- Outfit wise로 구성된 Batch에 바로 적용할 수 있는 Metric learning loss
+**What is included**
+- Data proprocessor that can easily configure Outfit as Dataset and Batch unit
+- Fashion compatibility Models
+- Metric learning loss that can be applied immediately to Batch configured with Outfit-wise
 
 
 ## 📚 Supported Models
@@ -87,7 +87,7 @@ Please write a code separately from the case of **returning embeds for all categ
 
 In addition, in order to change the resulting embedding back to the form of input, it must be transformed using the `unstack_tensor` and returned.
 
-Use the DeepFashion Output class to return the output according to the form. It is convenient to use the loss functions that has already been written in the library.
+Use the **DeepFashionOutput** class to return the output according to the form. It is convenient to use the loss functions that has already been written in the library.
 
 ```
 class CustomModel(DeepFashionModel):
@@ -114,7 +114,7 @@ class CustomModel(DeepFashionModel):
 
 ```
 ### 3. Train!
-Refer to train.py and use given `trainer`.
+Refer to `train.py` and use given `trainer`.
 
 ## 🧶 Demos & Inference
 Preparing for demos...

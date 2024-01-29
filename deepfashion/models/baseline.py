@@ -7,7 +7,9 @@ import os
 import math
 import wandb
 from tqdm import tqdm
+from copy import deepcopy
 from itertools import chain
+from datetime import datetime
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union, Literal
 
@@ -25,13 +27,22 @@ from deepfashion.models.baseline import *
 from deepfashion.models.encoder.builder import *
 
 
-
 @ dataclass
 class DeepFashionOutput:
     mask: Optional[Tensor] = None
     category: Optional[Tensor] = None
     embed: Optional[Tensor] = None
-    embed_by_category: Optional[Tensor] = None
+    embed_by_category: Optional[List[Tensor]] = None
+
+@dataclass
+class DeepFashionFitArguments:
+    model_name: str
+    n_epochs: int=100
+    learning_rate: float=0.01
+    save_every: int=1
+    save_dir: str=None
+    use_wandb: bool=False
+    device: str='cuda'
 
 
 class DeepFashionModel(nn.Module):
@@ -55,13 +66,16 @@ class DeepFashionModel(nn.Module):
         self.margin = margin
         pass
 
+
     def forward(self, inputs) -> DeepFashionOutput:
         return NotImplementedError("DeepFashionModel must implement its own forward method")
     
+
     def iteration_step(self, batch, device) -> np.ndarray:
         return NotImplementedError("DeepFashionModel must implement its own iteration_step method")
     
-    def evalutaion_step(self, batch, device):
+
+    def fitb_step(self, batch, device):
         questions = {key: value.to(device) for key, value in batch['questions'].items()}
         candidates = {key: value.to(device) for key, value in batch['candidates'].items()}
 
@@ -78,19 +92,19 @@ class DeepFashionModel(nn.Module):
                     c = candidate_outs.embed_by_category[question_outs.category[b_i][q_i]][b_i][c_i]
                     score += float(nn.PairwiseDistance(p=2)(q, c))
                 dists.append(score)
-            # print(dists)
             ans.append(np.argmin(np.array(dists)))
         ans = np.array(ans)
         return ans
     
-    def evaluation(self, dataloader, epoch, is_test, device, use_wandb=False):
+
+    def fitb(self, dataloader, epoch, is_test, device, use_wandb=False):
         type_str = 'test' if is_test else 'fitb'
         epoch_iterator = tqdm(dataloader)
         
         total_correct = 0.
         total_item = 0.
         for iter, batch in enumerate(epoch_iterator, start=1):
-            ans = self.evalutaion_step(batch, device)
+            ans = self.fitb_step(batch, device)
 
             run_correct = np.sum(ans==0)
             run_item = len(ans)
@@ -109,6 +123,7 @@ class DeepFashionModel(nn.Module):
         print( f'[{type_str} END] Epoch: {epoch + 1:03} | Acc: {total_acc:.5f} ' + '\n')
 
         return total_acc
+
 
     def iteration(self, dataloader, epoch, is_train, device,
                   optimizer=None, scheduler=None, use_wandb=False):
@@ -141,5 +156,79 @@ class DeepFashionModel(nn.Module):
 
         return total_loss
     
-    def _one_hot(self, x):
-        return F.one_hot(x, num_classes=self.num_category).to(torch.float32)
+    
+    def fit(
+            self,
+            args: DeepFashionFitArguments,
+            train_dataloader: DataLoader,
+            valid_dataloader: DataLoader,
+            fitb_dataloader: DataLoader,
+            optimizer: torch.optim.Optimizer,
+            scheduler: Optional[torch.optim.lr_scheduler.StepLR] = None,
+            ):
+        date = datetime.now().strftime('%Y-%m-%d')
+        output_dir = os.path.join(args.save_dir, args.model_name, date)
+
+        device = torch.device(args.device)
+        self.to(device)
+
+        best_criterion = -np.inf
+        best_model = None
+
+        for epoch in range(args.n_epochs):
+            train_loss = self.iteration(
+                dataloader = train_dataloader, 
+                epoch = epoch, 
+                is_train = True, 
+                device = device,
+                optimizer = optimizer, 
+                scheduler = scheduler, 
+                use_wandb = args.use_wandb
+                )
+            
+            with torch.no_grad():
+                valid_loss = self.iteration(
+                    dataloader = valid_dataloader, 
+                    epoch = epoch, 
+                    is_train = False,
+                    device = device,
+                    use_wandb = args.use_wandb
+                    )
+                fitb_score = self.fitb(
+                    dataloader = fitb_dataloader,
+                    epoch = epoch,
+                    is_test = False,
+                    device = device,
+                    use_wandb = args.use_wandb
+                    )
+
+            if fitb_score > best_criterion:
+               best_criterion = fitb_score
+               best_state = deepcopy(self.state_dict())
+
+            if epoch % args.save_every == 0:
+                model_name = f'{epoch}_{best_criterion:.3f}'
+                self._save(output_dir, model_name)
+
+        self._save(output_dir, 'final', best_state)
+
+
+    def _save(self, 
+              dir, 
+              model_name, 
+              best_state=None):
+        def _create_folder(dir):
+            try:
+                if not os.path.exists(dir):
+                    os.makedirs(dir)
+            except OSError:
+                print('[Error] Creating directory.' + dir)
+        _create_folder(dir)
+        path = os.path.join(dir, f'{model_name}.pth')
+        checkpoint = {'state_dict': best_state if best_state is not None else self.state_dict()}
+        torch.save(checkpoint, path)
+        print(f'[COMPLETE] Save at {path}')
+
+
+    
+    

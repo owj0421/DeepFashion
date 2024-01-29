@@ -14,9 +14,9 @@
 Deep Fashion is a **Easy-to-use**, **Modular** and **Extendible** package of deep-learning based fashion recommendation models with PyTorch. <br><br>
 Behind the fact that none of the numerous papers released since 2018 have been implemented, we implement and distribute the model ourselves. We aimed to implement the paper as much as possible, but since it is a personal project, there may be some other aspects. Therefore, if there is a better way, please contribute.<br><br>
 **What is included**
-- Data proprocessor that can easily configure Outfit as Dataset and Batch unit
-- Fashion compatibility Models
-- Metric learning loss that can be applied immediately to Batch configured with Outfit-wise
+- Data proprocessor that can easily configure **set of outfits** as Dataset
+- Fashion compatibility models
+- Metric learning loss that can be applied immediately to Batch configured with **outfit-wise dataset**
 
 
 ## 📚 Supported Models
@@ -33,9 +33,8 @@ Behind the fact that none of the numerous papers released since 2018 have been i
 </div>
 
 **Notes**
- - The model implementation is based on the above papers, but there may be other parts of it.
- - In the test environment, for fairness, the embedding size was fixed at **32**, and **only images** were used.
- - Learning was conducted with **online mining batch-all method**.
+ - Implementation is based on the above papers, but there may be differents.
+ - In the test, for fairness, the embedding size was fixed at **32**, and **only images** were used.
  - Only the models studied for the purpose of **retrieval** were developed, so the prediction-based models(SCE-Net, Outfit-Transformer etc) were not implemented.
 
 
@@ -51,76 +50,14 @@ python -m pip install -r requirements.txt
 2. `$MODEL` is same as above mentioned sheet.
 
     ```
-    !python train.py --model $MODEL --embedding_dim $NUM --dataset_type outfit --train_batch 64 --valid_batch 64 --fitb_batch 32 --n_epochs 5 --work_dir $DIR --data_dir $DIR --num_workers 4 --scheduler_step_size 500 --learning_rate 5e-5
+    !python train.py --model $MODEL --embedding_dim $NUM --dataset_type outfit --train_batch 64 --valid_batch 64 --fitb_batch 32 --n_epochs 5 --save_dir $DIR --data_dir $DIR --num_workers 4 --scheduler_step_size 500 --learning_rate 5e-5
     ```
 
-## 🧱 To Build Your Own Dataset and Model
-Please refer to `datasets/polyvore.py` and `models/csa_net.py` for detailed implementation. The overall usage is as follows.
-
-
-### 1. Build Custom dataset using `DeepFashionProcessor` in `datasets/processor.py`.
-    
-```
-class CustomDataset(Dataset):
-    def __init__(...):
-        ...
-        image_processor = DeepFashionImageProcessor(...)
-        self.input_processor = DeepFashionInputProcessor(...)
-        ...
-
-    def __getitem__(...):
-        ...
-        return self.input_processor(...)
-```
-
-**Note**
-- After using Pytorch Dataset, Dataloader, and input processor, Batch is **[B, O, ...]** dimensions, where B is size of batch and O is the maximum length of items in the outfit.
-
-
-### 2. Build Custom model by inheriting `DeepFashionModel` in `models/baseline.py`.<br>
-
-Since the DeepFashion Model basically includes methods such as logging and iteration required for training, only the following **three methods need to be added**.<br>
-
-In order to efficiently calculate the [B, O, ...] dimensional input containing Pad, it is necessary to **modify the input to the [B * V, ...] dimensions** through `stack_inputs` at the beginning of forward. (In this case, V is the actual number of items in the Batch.)
-
-Please write a code separately from the case of **returning embeds for all categories** because the target category to be used for training is not given, and the case where **the target category to be used for Inference is given**.
-
-In addition, in order to change the resulting embedding back to the form of input, it must be transformed using the `unstack_tensor` and returned.
-
-Use the **DeepFashionOutput** class to return the output according to the form. It is convenient to use the loss functions that has already been written in the library.
-
-```
-class CustomModel(DeepFashionModel):
-    def __init__(...):
-            ...
-
-    def forward(self, inputs) -> DeepFashionOutput:
-        inputs = stack_dict(inputs)
-        ...
-        if target_category is not None:
-            ...
-        else:
-            embed_by_category = []
-            for i in range(self.num_category):
-                ...
-            outputs.embed_by_category = embed_by_category
-        return DeepFashionOutput(...)
-
-    def iteration_step(self, batch, device):
-        ...
-
-    def evalutaion_step(self, batch, device):
-        ...
-
-```
-### 3. Train!
-Refer to `train.py` and use given `trainer`.
 
 ## 🧶 Demos & Inference
 Preparing for demos...
 
 
 ## 🔔 Note
-- A paper review of implementation can be found at [here](). (Only Available in Korean)
 - This is **NON-OFFICIAL** implementation.
 - The part that uses the HGLMM Fisher vector is replaced by **SBERT Embedding**. If you want to use Fisher vector, you can change txt_type to 'hglmm'. but it requires to revise model codes.

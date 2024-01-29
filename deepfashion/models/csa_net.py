@@ -48,8 +48,8 @@ class CSANet(DeepFashionModel):
 
 
     def _get_mask(self, input_category, target_category):
-        input_category = self._one_hot(input_category)
-        target_category = self._one_hot(target_category)
+        input_category = one_hot(input_category, self.num_category)
+        target_category = one_hot(target_category, self.num_category)
         attention_query = torch.concat([input_category, target_category], dim=-1)
         attention = F.softmax(self.attention(attention_query), dim=-1)
 
@@ -57,25 +57,25 @@ class CSANet(DeepFashionModel):
 
 
     def forward(self, inputs, target_category=None):
-        outputs = DeepFashionOutput(mask=inputs['mask'], category=inputs['category'])
         inputs = stack_dict(inputs)
+        outputs = DeepFashionOutput(
+            mask=inputs['mask'],
+            category=inputs['category'],
+            )
 
         embed = self.img_encoder(inputs['image_features']) # Get genreral embedding from inputs
         if target_category is not None:
             target_category = stack_tensors(inputs['mask'], target_category)
-            masked_embed = embed * self._get_mask(inputs['category'], target_category)
-
-            outputs.embed = unstack_tensors(inputs['mask'], masked_embed)
+            outputs.embed = embed * self._get_mask(inputs['category'], target_category)
         else: # returns embedding for all categories
             embed_by_category = []
             for i in range(self.num_category):
                 target_category = torch.ones((inputs['category'].shape[0]), dtype=torch.long, device=inputs['category'].get_device()) * i
-                masked_embed = embed * self._get_mask(inputs['category'], target_category)
-
-                embed_by_category.append(unstack_tensors(inputs['mask'], masked_embed))
+                embed = embed * self._get_mask(inputs['category'], target_category)
+                embed_by_category.append(embed)
             outputs.embed_by_category = embed_by_category
 
-        return outputs
+        return unstack_output(outputs)
 
 
     def iteration_step(self, batch, device):

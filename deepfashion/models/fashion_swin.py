@@ -45,28 +45,24 @@ class FashionSwin(DeepFashionModel):
 
 
     def forward(self, inputs, target_category=None):
-        outputs = DeepFashionOutput(mask=inputs['mask'], category=inputs['category'])
         inputs = stack_dict(inputs)
+        outputs = DeepFashionOutput(
+            mask=inputs['mask'],
+            category=inputs['category'],
+            )
         general_img_embed = self.img_encoder(inputs['image_features'])
-        # general_txt_embed = self.txt_encoder(input_ids = inputs['input_ids'], attention_mask = inputs['attention_mask'])
         if target_category is not None:
             target_category = stack_tensors(inputs['mask'], target_category)
-            masked_embed = general_img_embed * self._get_mask(inputs['category'], target_category)
-            outputs.embed = unstack_tensors(inputs['mask'], masked_embed)
-            # txt_embed = unstack_tensors(inputs['mask'], general_txt_embed * category_mask)
+            outputs.embed = general_img_embed * self._get_mask(inputs['category'], target_category)
         else: # returns embedding for all categories
             embed_by_category = []
-            # txt_embed_by_category = []
             for i in range(self.num_category):
                 target_category = torch.ones((inputs['category'].shape[0]), dtype=torch.long, device=inputs['category'].get_device()) * i
-                masked_embed = general_img_embed * self._get_mask(inputs['category'], target_category)
-                embed_by_category.append(unstack_tensors(inputs['mask'], masked_embed))
-                # txt_embed_by_category.append(unstack_tensors(inputs['mask'], general_txt_embed * category_mask))
+                embed = general_img_embed * self._get_mask(inputs['category'], target_category)
+                embed_by_category.append(embed)
             outputs.embed_by_category = embed_by_category
-            # outputs.txt_embed_by_category = txt_embed_by_category
-        outputs.general_img_embed = unstack_tensors(inputs['mask'], general_img_embed)
-        # outputs.general_txt_embed = unstack_tensors(inputs['mask'], general_txt_embed)
-        return outputs
+        outputs.general_img_embed = general_img_embed
+        return unstack_output(outputs)
     
 
     def iteration_step(self, batch, device) -> np.ndarray:

@@ -8,6 +8,7 @@ import numpy as np
 import random
 import json
 import torch
+import torch.nn.functional as F
 from torch import Tensor
 from dataclasses import dataclass
 import cv2
@@ -20,6 +21,10 @@ from deepfashion.models.baseline import *
 
 def stack_tensors(mask, tensor):
     B, S = mask.shape
+    if tensor.shape[0] != B:
+        raise ValueError(
+            'Tensor is already stacked or has invalid shape'
+        )
     mask = mask.view(-1)
     s = list(tensor.shape)
     tensor = tensor.contiguous().view([s[0] * s[1]] + s[2:])
@@ -29,6 +34,11 @@ def stack_tensors(mask, tensor):
 
 def unstack_tensors(mask, tensor):
     B, S = mask.shape
+    if tensor.shape[0] == B:
+        print(tensor.shape[0])
+        raise ValueError(
+            'Tensor is already unstacked or has invalid shape'
+        )
     mask = mask.view(-1)
     new_shape = [B * S] + list(tensor.shape)[1:]
     new_tensor = torch.zeros(new_shape, dtype=tensor.dtype, device=tensor.get_device())
@@ -59,6 +69,13 @@ def unstack_output(output):
     for i in output.__dict__.keys():
         if i == 'mask':
             continue
-        setattr(output, i, unstack_tensors(output.mask, getattr(output, i)))
+        attr = getattr(output, i)
+        if isinstance(attr, list):
+            setattr(output, i, [unstack_tensors(output.mask, i) for i in attr])
+        elif isinstance(attr, Tensor):
+            setattr(output, i, unstack_tensors(output.mask, attr))
     return output
 
+
+def one_hot(x, num_category):
+    return F.one_hot(x, num_classes=num_category).to(torch.float32)

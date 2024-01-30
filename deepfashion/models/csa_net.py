@@ -71,8 +71,7 @@ class CSANet(DeepFashionModel):
             embed_by_category = []
             for i in range(self.num_category):
                 target_category = torch.ones((inputs['category'].shape[0]), dtype=torch.long, device=inputs['category'].get_device()) * i
-                embed = embed * self._get_mask(inputs['category'], target_category)
-                embed_by_category.append(embed)
+                embed_by_category.append(embed * self._get_mask(inputs['category'], target_category))
             outputs.embed_by_category = embed_by_category
 
         return unstack_output(outputs)

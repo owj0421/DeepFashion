@@ -58,8 +58,7 @@ class FashionSwin(DeepFashionModel):
             embed_by_category = []
             for i in range(self.num_category):
                 target_category = torch.ones((inputs['category'].shape[0]), dtype=torch.long, device=inputs['category'].get_device()) * i
-                embed = general_img_embed * self._get_mask(inputs['category'], target_category)
-                embed_by_category.append(embed)
+                embed_by_category.append(general_img_embed * self._get_mask(inputs['category'], target_category))
             outputs.embed_by_category = embed_by_category
         outputs.general_img_embed = general_img_embed
         return unstack_output(outputs)

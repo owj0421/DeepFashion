@@ -176,6 +176,7 @@ class DeepFashionModel(nn.Module):
         best_model = None
 
         for epoch in range(args.n_epochs):
+            self.train()
             train_loss = self.iteration(
                 dataloader = train_dataloader, 
                 epoch = epoch, 
@@ -186,6 +187,7 @@ class DeepFashionModel(nn.Module):
                 use_wandb = args.use_wandb
                 )
             
+            self.eval()
             with torch.no_grad():
                 valid_loss = self.iteration(
                     dataloader = valid_dataloader, 

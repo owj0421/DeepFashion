@@ -15,7 +15,7 @@ Deep Fashion is a **Easy-to-use**, **Modular** and **Extendible** package of dee
 Behind the fact that none of the numerous papers released since 2018 have been implemented, we implement and distribute the model ourselves. We aimed to implement the paper as much as possible, but since it is a personal project, there may be some other aspects. Therefore, if there is a better way, please contribute.<br><br>
 **What is included**
 - Data proprocessor that can easily configure **set of outfits** as Dataset
-- Fashion compatibility models
+- **Fashion compatibility models**
 - Metric learning loss that can be applied immediately to Batch configured with **outfit-wise dataset**
 
 

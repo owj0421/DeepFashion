@@ -119,7 +119,7 @@ class PolyvoreDataset(Dataset):
         if self.args.task_type == 'cp':
             target, outfit_ids = self.data[idx]
             inputs = self._get_inputs(outfit_ids, pad=True)
-            return {'target': target, 'inputs': inputs}
+            return {'targets': target, 'inputs': inputs}
         
         elif self.args.task_type =='fitb':
             question_ids, candidate_ids = self.data[idx]
